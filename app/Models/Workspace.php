@@ -22,7 +22,7 @@ class Workspace extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class)
+        return $this->belongsToMany(User::class, 'workspace_user')
             ->withPivot('role')
             ->withTimestamps();
     }
@@ -32,3 +32,4 @@ class Workspace extends Model
         return $this->hasMany(Project::class);
     }
 }
+

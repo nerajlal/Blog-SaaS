@@ -53,3 +53,4 @@ class WorkspaceController extends Controller
         return redirect()->route('admin.projects')->with('success', 'New workspace created!');
     }
 }
+
