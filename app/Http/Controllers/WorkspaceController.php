@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use App\Models\Workspace;
 
 class WorkspaceController extends Controller
@@ -32,25 +33,27 @@ class WorkspaceController extends Controller
 
         $user = Auth::user();
 
-        $slugBase = Str::slug($request->name);
-        $slug = $slugBase;
-        $counter = 1;
-        while (Workspace::where('slug', $slug)->exists()) {
-            $slug = $slugBase . '-' . $counter++;
-        }
+        return DB::transaction(function () use ($request, $user) {
+            $slugBase = Str::slug($request->name);
+            $slug = $slugBase;
+            $counter = 1;
+            while (Workspace::where('slug', $slug)->exists()) {
+                $slug = $slugBase . '-' . $counter++;
+            }
 
-        $workspace = Workspace::create([
-            'owner_id' => $user->id,
-            'name' => $request->name,
-            'slug' => $slug,
-        ]);
+            $workspace = Workspace::create([
+                'owner_id' => $user->id,
+                'name' => $request->name,
+                'slug' => $slug,
+            ]);
 
-        $workspace->users()->attach($user->id, ['role' => 'owner']);
+            $workspace->users()->attach($user->id, ['role' => 'owner']);
 
-        $user->current_workspace_id = $workspace->id;
-        $user->save();
+            $user->current_workspace_id = $workspace->id;
+            $user->save();
 
-        return redirect()->route('admin.projects')->with('success', 'New workspace created!');
+            return redirect()->route('admin.projects')->with('success', 'New workspace created!');
+        });
     }
 }
 

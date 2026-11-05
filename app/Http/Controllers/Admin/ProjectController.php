@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Project;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
 {
@@ -25,6 +27,7 @@ class ProjectController extends Controller
             $user->current_workspace_id = $ws->id;
             $user->save();
         }
+        abort_unless($user->workspaces()->whereKey($user->current_workspace_id)->exists(), 403);
         return $user->currentWorkspace;
     }
 
@@ -37,7 +40,8 @@ class ProjectController extends Controller
                 $query->where('user_id', Auth::id())->whereNull('workspace_id');
             })
             ->withCount('blogs')
-            ->get();
+            ->latest('id')
+            ->paginate(12);
 
         $workspaces = Auth::user()->workspaces;
 
@@ -49,54 +53,51 @@ class ProjectController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'subdomain' => 'nullable|string|max:100|alpha_dash|unique:projects,subdomain',
-            'description' => 'nullable|string',
+            'description' => 'nullable|string|max:10000',
         ]);
 
         $workspace = $this->getCurrentWorkspace();
 
-        $subdomain = $request->subdomain ? Str::slug($request->subdomain) : Str::slug($request->name);
-        $counter = 1;
-        $originalSubdomain = $subdomain;
-        while (Project::where('subdomain', $subdomain)->exists()) {
-            $subdomain = $originalSubdomain . '-' . $counter++;
-        }
+        Gate::authorize('createInWorkspace', [Project::class, $workspace]);
 
-        $project = Project::create([
-            'user_id' => Auth::id(),
-            'workspace_id' => $workspace->id,
-            'name' => $request->name,
-            'subdomain' => $subdomain,
-            'description' => $request->description,
-            'api_key' => 'pk_' . Str::random(32),
-        ]);
+        return DB::transaction(function () use ($request, $workspace) {
+            $subdomain = $request->subdomain ? Str::slug($request->subdomain) : Str::slug($request->name);
+            $counter = 1;
+            $subdomain = $subdomain ?: Str::lower(Str::random(12));
+            $originalSubdomain = $subdomain;
+            while (Project::where('subdomain', $subdomain)->exists()) {
+                $subdomain = $originalSubdomain . '-' . $counter++;
+            }
 
-        $defaultCategories = ['General', 'News', 'Tutorials'];
-        foreach ($defaultCategories as $catName) {
-            $project->categories()->create([
-                'name' => $catName,
-                'slug' => Str::slug($catName),
+            $project = Project::create([
+                'user_id' => Auth::id(),
+                'workspace_id' => $workspace->id,
+                'name' => $request->name,
+                'subdomain' => $subdomain,
+                'description' => $request->description,
+                'api_key' => 'pk_' . Str::random(32),
             ]);
-        }
 
-        return redirect()->route('admin.projects')->with('success', 'Project created successfully!');
+            $defaultCategories = ['General', 'News', 'Tutorials'];
+            foreach ($defaultCategories as $catName) {
+                $project->categories()->create([
+                    'name' => $catName,
+                    'slug' => Str::slug($catName),
+                ]);
+            }
+
+            return redirect()->route('admin.projects')->with('success', 'Project created successfully!');
+        });
     }
 
     public function show(Project $project)
     {
         $workspace = $this->getCurrentWorkspace();
 
-        // Check project access within current workspace or owned by user
-        if ($project->workspace_id !== $workspace->id && $project->user_id !== Auth::id()) {
-            abort(403);
-        }
+        Gate::authorize('view', $project);
 
-        $project->load([
-            'blogs' => function ($query) {
-                $query->latest();
-            },
-            'blogs.category',
-            'categories'
-        ]);
+        $project->load('categories');
+        $blogs = $project->blogs()->with(['category', 'user'])->latest('id')->paginate(25);
 
         $otherProjects = Project::where('workspace_id', $workspace->id)
             ->where('id', '!=', $project->id)
@@ -105,6 +106,6 @@ class ProjectController extends Controller
 
         $workspaces = Auth::user()->workspaces;
 
-        return view('admin.project-details', compact('project', 'otherProjects', 'workspace', 'workspaces'));
+        return view('admin.project-details', compact('project', 'blogs', 'otherProjects', 'workspace', 'workspaces'));
     }
 }

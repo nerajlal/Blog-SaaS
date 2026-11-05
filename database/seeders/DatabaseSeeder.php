@@ -19,6 +19,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        if (app()->environment('production')) {
+            throw new \RuntimeException('Demo seeding is disabled in production.');
+        }
+
         // 1. Create Demo SaaS User
         $user = User::updateOrCreate(
             ['email' => 'admin@gmail.com'],

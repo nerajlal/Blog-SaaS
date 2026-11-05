@@ -7,15 +7,13 @@ use Illuminate\Http\Request;
 use App\Models\Project;
 use App\Models\Category;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class CategoryController extends Controller
 {
     public function store(Request $request, Project $project)
     {
-        if ($project->user_id !== Auth::id()) {
-            abort(403);
-        }
+        Gate::authorize('update', $project);
 
         $request->validate([
             'name' => 'required|string|max:255'
@@ -31,7 +29,8 @@ class CategoryController extends Controller
 
     public function destroy(Project $project, Category $category)
     {
-        if ($project->user_id !== Auth::id() || $category->project_id !== $project->id) {
+        Gate::authorize('update', $project);
+        if ($category->project_id !== $project->id) {
             abort(403);
         }
 

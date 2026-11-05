@@ -36,6 +36,7 @@
         </a>
         @endforeach
 
+        @can('createInWorkspace', [\App\Models\Project::class, $workspace])
         <!-- Empty State / Create New -->
         <form action="{{ route('admin.projects.store') }}" method="POST" class="bg-white border-2 border-dashed border-slate-300 hover:border-brand-300 hover:bg-brand-50/30 rounded-2xl p-6 flex flex-col items-center justify-center transition-all group min-h-[240px]">
             @csrf
@@ -46,6 +47,8 @@
             <input type="text" name="description" placeholder="Description..." class="w-full mb-4 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 font-medium focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-shadow">
             <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors">Create Project</button>
         </form>
+        @endcan
     </div>
+    <div class="mt-6">{{ $projects->links() }}</div>
 </div>
 @endsection

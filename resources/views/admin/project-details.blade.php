@@ -12,8 +12,13 @@
 @section('content')
 <div class="max-w-5xl mx-auto space-y-8">
     
+    <section class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-white border border-slate-200 rounded-2xl p-6">
+        <div><h2 class="font-bold text-lg">Search appearance</h2><p class="text-sm text-slate-500 mt-1">{{ $project->seo_verified_at ? 'Public domain verified. Set up your frontend to render SEO metadata and proxy the sitemap.' : 'Configure publication defaults and verify your public domain to enable canonical URLs and sitemaps.' }}</p></div>
+        <div class="flex flex-wrap gap-2 shrink-0"><a href="{{ route('admin.links.index', $project) }}" class="border border-slate-300 bg-white font-semibold text-sm px-5 py-3 rounded-full">Links & URLs ↗</a><a href="{{ route('admin.seo.health', $project) }}" class="border border-slate-300 bg-white font-semibold text-sm px-5 py-3 rounded-full">Content health ↗</a>
+        @can('manageSeo', $project)<a href="{{ route('admin.search.index',$project) }}" class="border border-slate-300 font-semibold text-sm px-5 py-3 rounded-full">Search performance ↗</a><a href="{{ route('admin.projects.seo', $project) }}" class="shrink-0 bg-blue-600 text-white font-semibold text-sm px-5 py-3 rounded-full">SEO settings ↗</a>@endcan</div>
+    </section>
     <!-- API Key Section -->
-    <section class="bg-white border border-slate-200 shadow-sm rounded-3xl p-8 relative overflow-hidden">
+    <section id="api-docs" class="bg-white border border-slate-200 shadow-sm rounded-3xl p-8 relative overflow-hidden">
         <div class="absolute right-0 top-0 w-64 h-64 bg-brand-50 rounded-full blur-3xl -mr-20 -mt-20"></div>
         <div class="relative z-10">
             <div class="flex items-center mb-6">
@@ -26,13 +31,14 @@
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row items-center bg-slate-50 border border-slate-200 rounded-xl p-2 mt-4 gap-2">
-                <input type="text" readonly value="{{ $project->api_key }}" class="bg-transparent border-none w-full text-slate-900 font-mono text-sm px-4 py-2 focus:outline-none focus:ring-0">
-                <button class="w-full sm:w-auto px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-sm font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center whitespace-nowrap">
+                <input id="project-api-key" aria-label="Project read-only API key" type="text" readonly value="{{ $project->api_key }}" class="bg-transparent border-none w-full text-slate-900 font-mono text-sm px-4 py-2 focus:outline-none focus:ring-0">
+                <button type="button" onclick="copyProjectKey(this)" class="w-full sm:w-auto px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-sm font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center whitespace-nowrap">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                     Copy
                 </button>
             </div>
             <div class="mt-6 pt-6 border-t border-slate-100">
+                <p class="text-xs text-slate-500 mb-3">Published content only. Use ?page=2&amp;per_page=20 to paginate (maximum 100). Check meta.last_page for more results.</p>
                 <p class="text-sm font-medium text-slate-500">API Endpoint: <code class="text-slate-800 bg-slate-100 px-2 py-1 rounded-md font-mono text-xs border border-slate-200">{{ url('/api/v1/projects/blogs') }}</code></p>
             </div>
         </div>
@@ -70,9 +76,9 @@ fetch('{{ url('/api/v1/projects/blogs') }}', {
         'X-API-KEY': API_KEY
     }
 })
-.then(response => response.json())
-.then(data => console.log(data))
-.catch(error => console.error(error));</code></pre>
+.then(response =&gt; response.json())
+.then(data =&gt; console.log(data))
+.catch(error =&gt; console.error(error));</code></pre>
                     </div>
                 </div>
 
@@ -85,22 +91,22 @@ fetch('{{ url('/api/v1/projects/blogs') }}', {
 axios.get('{{ url('/api/v1/projects/blogs') }}', {
     headers: { 'X-API-KEY': '{{ $project->api_key }}' }
 })
-.then(response => {
+.then(response =&gt; {
     setBlogs(response.data.blogs);
 })
-.catch(error => console.error(error));
+.catch(error =&gt; console.error(error));
 
 /* Example Rendering:
-{blogs.map(blog => (
-    <article key={blog.id}>
-        <h1>{blog.title}</h1>
-        {blog.sections.map(section => (
-            <div key={section.id}>
-                {section.image_path && <img src={`{{ url('') }}${section.image_path}`} />}
-                <p>{section.text_content}</p>
-            </div>
+{blogs.map(blog =&gt; (
+    &lt;article key={blog.id}&gt;
+        &lt;h1&gt;{blog.title}&lt;/h1&gt;
+        {blog.sections.map(section =&gt; (
+            &lt;div key={section.id}&gt;
+                {section.image_path &amp;&amp; &lt;img src={`{{ url('') }}${section.image_path}`} /&gt;}
+                &lt;p&gt;{section.text_content}&lt;/p&gt;
+            &lt;/div&gt;
         ))}
-    </article>
+    &lt;/article&gt;
 ))}
 */</code></pre>
                     </div>
@@ -128,15 +134,15 @@ $data = json_decode($response, true);
 // Example Rendering:
 if (isset($data['blogs'])) {
     foreach($data['blogs'] as $blog) {
-        echo "<h1>" . htmlspecialchars($blog['title']) . "</h1>";
+        echo "&lt;h1&gt;" . htmlspecialchars($blog['title']) . "&lt;/h1&gt;";
         
         // Loop through the dynamic sections
         foreach($blog['sections'] as $section) {
             if ($section['image_path']) {
-                echo "<img src='{{ url('') }}" . htmlspecialchars($section['image_path']) . "' />";
+                echo "&lt;img src='{{ url('') }}" . htmlspecialchars($section['image_path']) . "' /&gt;";
             }
             if ($section['text_content']) {
-                echo "<p>" . nl2br(htmlspecialchars($section['text_content'])) . "</p>";
+                echo "&lt;p&gt;" . nl2br(htmlspecialchars($section['text_content'])) . "&lt;/p&gt;";
             }
         }
     }
@@ -158,16 +164,19 @@ if (isset($data['blogs'])) {
         </div>
         
         <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm ring-1 ring-slate-200/50">
+            @can('update', $project)
             <form action="{{ route('admin.categories.store', $project->id) }}" method="POST" class="flex gap-2 mb-6">
                 @csrf
                 <input type="text" name="name" placeholder="New Category Name" required class="flex-1 rounded-xl border-slate-200 shadow-sm focus:border-brand-500 focus:ring-brand-500 text-sm">
                 <button type="submit" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-bold uppercase tracking-wider transition-colors shadow-lg shadow-brand-500/20">Add</button>
             </form>
+            @endcan
 
             <div class="flex flex-wrap gap-3">
                 @forelse($project->categories as $category)
                 <div class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium bg-slate-50 border border-slate-200 text-slate-700 group">
                     <span>{{ $category->name }}</span>
+                    @can('update', $project)
                     <form action="{{ route('admin.categories.destroy', [$project->id, $category->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this category?');" class="ml-2 inline-flex">
                         @csrf
                         @method('DELETE')
@@ -175,6 +184,7 @@ if (isset($data['blogs'])) {
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </form>
+                    @endcan
                 </div>
                 @empty
                 <p class="text-slate-500 text-sm">No categories yet.</p>
@@ -186,11 +196,13 @@ if (isset($data['blogs'])) {
     <!-- Blogs List Section -->
     <section>
         <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight uppercase">Published Blogs</h2>
+            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight uppercase">Blog posts</h2>
+            @can('update', $project)
             <a href="{{ route('admin.create-blog', $project->id) }}" class="inline-flex justify-center px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-bold uppercase tracking-wider transition-colors shadow-lg shadow-brand-500/20 items-center">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 Create Blog
             </a>
+            @endcan
         </div>
         
         <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm ring-1 ring-slate-200/50">
@@ -206,7 +218,7 @@ if (isset($data['blogs'])) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
-                        @forelse($project->blogs as $blog)
+                        @forelse($blogs as $blog)
                         <tr class="hover:bg-slate-50 transition-colors group">
                             <td class="p-5">
                                 <div class="flex items-center">
@@ -244,6 +256,7 @@ if (isset($data['blogs'])) {
                                         <span class="text-[10px] text-slate-500 font-medium mt-1">{{ $blog->published_at->format('M d, Y h:i A') }}</span>
                                     </div>
                                 @else
+                                    @can('update', $project)
                                     <form action="{{ route('admin.blogs.toggle-status', $blog->id) }}" method="POST">
                                         @csrf
                                         @method('PATCH')
@@ -258,10 +271,12 @@ if (isset($data['blogs'])) {
                                             </div>
                                         </label>
                                     </form>
+                                    @else<span class="text-xs text-slate-500">{{ ucfirst($blog->status) }}</span>@endcan
                                 @endif
                             </td>
                             <td class="p-5 text-sm font-medium text-slate-600">{{ $blog->created_at->format('M d, Y') }}</td>
                             <td class="p-5 text-right flex justify-end space-x-2">
+                                @can('update', $project)
                                 <a href="{{ route('admin.blogs.edit', $blog->id) }}" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-colors inline-block" title="Edit Blog">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                 </a>
@@ -278,6 +293,7 @@ if (isset($data['blogs'])) {
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                     </button>
                                 </form>
+                                @else<span class="text-xs text-slate-400">Read only</span>@endcan
                             </td>
                         </tr>
                         @empty
@@ -289,6 +305,7 @@ if (isset($data['blogs'])) {
                 </table>
             </div>
         </div>
+        <div class="mt-6">{{ $blogs->links() }}</div>
     </section>
 </div>
 
@@ -382,6 +399,15 @@ if (isset($data['blogs'])) {
 
 @push('scripts')
 <script>
+    async function copyProjectKey(button) {
+        try {
+            await navigator.clipboard.writeText(document.getElementById('project-api-key').value);
+            button.textContent = 'Copied';
+        } catch {
+            document.getElementById('project-api-key').select();
+            button.textContent = 'Select and copy';
+        }
+    }
     const otherProjectsData = @json($otherProjects);
     let currentBlogCategory = '';
 

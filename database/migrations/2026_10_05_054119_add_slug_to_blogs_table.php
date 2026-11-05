@@ -40,6 +40,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('blogs', function (Blueprint $table) {
+            $table->dropUnique(['slug']);
             $table->dropColumn('slug');
         });
     }

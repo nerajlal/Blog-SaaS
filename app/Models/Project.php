@@ -17,7 +17,12 @@ class Project extends Model
         'custom_domain',
         'description',
         'api_key',
+        'seo_settings',
     ];
+
+    protected $hidden = ['seo_domain_token', 'seo_content_version', 'telemetry_key_hash'];
+
+    protected $casts = ['seo_content_version' => 'integer', 'seo_settings' => 'array', 'seo_verified_at' => 'datetime'];
 
     public function user()
     {

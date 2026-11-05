@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - SaaS Blog Platform</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -23,6 +23,7 @@
         </div>
 
         <div class="bg-slate-800/80 backdrop-blur-md border border-slate-700/80 rounded-2xl p-8 shadow-2xl">
+            @if(session('status'))<p role="status" class="mb-5 text-sm text-emerald-400">{{ session('status') }}</p>@endif
             @if ($errors->any())
                 <div class="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm">
                     <ul class="list-disc list-inside space-y-1">
@@ -54,6 +55,7 @@
                         <input type="checkbox" name="remember" class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500">
                         <span class="ml-2 text-xs">Remember me</span>
                     </label>
+                    <a href="{{ route('password.request') }}" class="text-xs text-indigo-400 hover:text-indigo-300">Forgot password?</a>
                 </div>
 
                 <button type="submit"
@@ -65,7 +67,7 @@
             <div class="mt-6 pt-6 border-t border-slate-700/60 text-center">
                 <p class="text-sm text-slate-400">
                     Don't have an account? 
-                    <a href="{{ route('register') }}" class="font-medium text-indigo-400 hover:text-indigo-300 transition">Start free trial</a>
+                    <a href="{{ route('register') }}" class="font-medium text-indigo-400 hover:text-indigo-300 transition">Create an account</a>
                 </p>
             </div>
         </div>

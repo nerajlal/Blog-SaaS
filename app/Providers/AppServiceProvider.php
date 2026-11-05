@@ -19,6 +19,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \Illuminate\Support\Facades\View::composer('partials.sidebar', function ($view) {
+            if ($user = auth()->user()) {
+                $view->with('workspaces', $user->workspaces)->with('workspace', $user->currentWorkspace);
+            }
+        });
     }
 }

@@ -5,7 +5,7 @@
 @push('styles')
 <style>
     /* Quill CSS */
-    @import url('https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css');
+
     
     /* Custom styles for file inputs */
     input[type="file"] {
@@ -101,7 +101,7 @@
             </div>
 
             <!-- Main Form -->
-            <form action="{{ route('admin.blogs.update', $blog->id) }}" method="POST" enctype="multipart/form-data" class="bg-slate-50 rounded-2xl border border-slate-200 p-4 sm:p-8 shadow-inner">
+            <form id="blog-editor-form" action="{{ route('admin.blogs.update', $blog->id) }}" method="POST" enctype="multipart/form-data" class="bg-slate-50 rounded-2xl border border-slate-200 p-4 sm:p-8 shadow-inner">
                 @csrf
                 @method('PUT')
                 
@@ -183,78 +183,14 @@
                         </div>
                     </div>
 
-                    <!-- Post Content Sections -->
-                    <div id="sections-container" class="space-y-6">
-                        <div>
-                            <div class="flex items-center justify-between mb-3">
-                                <label class="block text-xs font-extrabold text-slate-800 uppercase tracking-widest">Post Sections</label>
-                                <button type="button" onclick="addSection()" class="text-xs font-bold text-brand-600 hover:text-brand-500 uppercase tracking-wider bg-brand-50 px-3 py-1.5 rounded-lg border border-brand-100 transition-colors shadow-sm">
-                                    + Add Section
-                                </button>
-                            </div>
-                            <p class="text-xs text-slate-500 font-medium mb-4">Build your blog by adding multiple text and image sections.</p>
-                        </div>
-
-                        @forelse($blog->sections as $index => $section)
-                        <div class="section-block bg-white border border-slate-200 rounded-2xl p-6 relative shadow-sm {{ $index > 0 ? 'mt-6' : '' }}">
-                            <button type="button" onclick="removeSection(this)" class="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors" title="Remove Section">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                            
-                            <div class="space-y-4 mt-2">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Section Text</label>
-                                    <div class="quill-editor bg-white rounded-xl" id="editor-{{ $index }}" style="min-height: 150px;">{!! $section->text_content !!}</div>
-                                    <input type="hidden" name="sections[{{ $index }}][text]" id="input-{{ $index }}" value="{{ $section->text_content }}">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Section Image (Optional)</label>
-                                    
-                                    @if($section->image_path)
-                                    <div class="mb-3">
-                                        <p class="text-xs text-slate-500 mb-1">Current Image:</p>
-                                        <img src="{{ $section->image_path }}" class="h-20 rounded-md border border-slate-200 object-cover">
-                                        <input type="hidden" name="sections[{{ $index }}][existing_image]" value="{{ $section->image_path }}">
-                                    </div>
-                                    @endif
-
-                                    <div class="file-upload-wrapper flex items-center border border-slate-200 rounded-lg p-2 bg-slate-50">
-                                        <label class="file-upload-btn cursor-pointer bg-brand-50 text-brand-600 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider hover:bg-brand-100 transition-colors">
-                                            Choose file
-                                            <input type="file" name="sections[{{ $index }}][image]" accept="image/*" class="hidden" onchange="this.parentElement.nextElementSibling.textContent = this.files[0] ? this.files[0].name : 'No file chosen'">
-                                        </label>
-                                        <span class="file-name text-xs ml-3 text-slate-500 font-medium">No file chosen</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        @empty
-                        <!-- Initial Section -->
-                        <div class="section-block bg-white border border-slate-200 rounded-2xl p-6 relative shadow-sm">
-                            <button type="button" onclick="removeSection(this)" class="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors" title="Remove Section">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                            
-                            <div class="space-y-4 mt-2">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Section Text</label>
-                                    <div class="quill-editor bg-white rounded-xl" id="editor-0" style="min-height: 150px;"></div>
-                                    <input type="hidden" name="sections[0][text]" id="input-0">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-widest mb-2">Section Image (Optional)</label>
-                                    <div class="file-upload-wrapper flex items-center border border-slate-200 rounded-lg p-2 bg-slate-50">
-                                        <label class="file-upload-btn cursor-pointer bg-brand-50 text-brand-600 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider hover:bg-brand-100 transition-colors">
-                                            Choose file
-                                            <input type="file" name="sections[0][image]" accept="image/*" class="hidden" onchange="this.parentElement.nextElementSibling.textContent = this.files[0] ? this.files[0].name : 'No file chosen'">
-                                        </label>
-                                        <span class="file-name text-xs ml-3 text-slate-500 font-medium">No file chosen</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        @endforelse
+                    <div class="grid sm:grid-cols-2 gap-5">
+                        <div><label for="cover_image_alt" class="block text-sm font-medium mb-2">Cover image alt text</label><input id="cover_image_alt" name="cover_image_alt" maxlength="500" value="{{ old('cover_image_alt', $blog->cover_image_alt ?? '') }}" class="w-full border border-slate-300 rounded-lg p-3 bg-white text-sm"></div>
+                        <div><label for="cover_image_caption" class="block text-sm font-medium mb-2">Cover image caption</label><input id="cover_image_caption" name="cover_image_caption" maxlength="2000" value="{{ old('cover_image_caption', $blog->cover_image_caption ?? '') }}" class="w-full border border-slate-300 rounded-lg p-3 bg-white text-sm"></div>
+                        <label class="text-xs text-slate-500 sm:col-span-2"><input type="hidden" name="cover_image_decorative" value="0"><input type="checkbox" name="cover_image_decorative" value="1" @checked(old('cover_image_decorative', $blog->cover_image_decorative ?? false))> Cover image is decorative (render empty alt text)</label>
                     </div>
+                    @include('partials.editor-sections')
+
+                    @include('partials.blog-seo')
 
                     <!-- Publish Settings -->
                     <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
@@ -298,22 +234,9 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+@vite('resources/js/editor.js')
 <script>
-    // Initialize Quill custom formats
-    const Parchment = Quill.import('parchment');
-    const LineHeightStyle = new Parchment.StyleAttributor('lineHeight', 'line-height', {
-        scope: Parchment.Scope.BLOCK,
-        whitelist: ['1', '1.5', '2']
-    });
-    Quill.register(LineHeightStyle, true);
-
-    const LetterSpacingStyle = new Parchment.StyleAttributor('letterSpacing', 'letter-spacing', {
-        scope: Parchment.Scope.INLINE,
-        whitelist: ['normal', '1px', '2px']
-    });
-    Quill.register(LetterSpacingStyle, true);
-
+    window.addEventListener('blog-editor-ready', function () {
     // Initialize Quill editors array
     const quillEditors = {};
 
@@ -323,30 +246,27 @@
             theme: 'snow',
             modules: {
                 toolbar: [
-                    [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
                     [{ 'header': [1, 2, 3, false] }],
                     ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'lineHeight': ['1', '1.5', '2'] }, { 'letterSpacing': ['normal', '1px', '2px'] }],
                     ['blockquote', 'code-block'],
                     [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['link', 'image', 'video'],
+                    ['link'],
                     ['clean']
                 ]
             }
         });
         
+        document.getElementById('input-' + index).value = quillEditors[index].root.innerHTML;
         quillEditors[index].on('text-change', function() {
             document.getElementById('input-' + index).value = quillEditors[index].root.innerHTML;
         });
     }
 
     // Initialize the editors on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        @forelse($blog->sections as $index => $section)
-            initQuill({{ $index }});
-        @empty
-            initQuill(0);
-        @endforelse
+    whenEditorDomReady(function() {
+        document.querySelectorAll('.quill-editor').forEach(editor => {
+            initQuill(Number(editor.id.replace('editor-', '')));
+        });
     });
 
     const statusSelect = document.getElementById('status-select');
@@ -360,7 +280,9 @@
         }
     });
 
-    let sectionCount = {{ max(1, count($blog->sections)) }};
+    scheduleContainer.classList.toggle('hidden', statusSelect.value !== 'scheduled');
+
+    let sectionCount = document.querySelectorAll('.quill-editor').length;
     function addSection() {
         const container = document.getElementById('sections-container');
         const sectionHtml = `
@@ -389,6 +311,11 @@
             </div>
         `;
         container.insertAdjacentHTML('beforeend', sectionHtml);
+        const block = container.lastElementChild;
+        const mediaFields = document.createElement('div');
+        mediaFields.className = 'mt-4 grid sm:grid-cols-2 gap-4';
+        mediaFields.innerHTML = `<label class="text-xs font-medium text-slate-600">Image alt text<input name="sections[${sectionCount}][image_alt]" maxlength="500" class="block w-full mt-2 border border-slate-300 rounded-lg p-3 text-sm"></label><label class="text-xs font-medium text-slate-600">Image caption<input name="sections[${sectionCount}][image_caption]" maxlength="2000" class="block w-full mt-2 border border-slate-300 rounded-lg p-3 text-sm"></label><label class="text-xs text-slate-600"><input type="hidden" name="sections[${sectionCount}][image_decorative]" value="0"><input type="checkbox" name="sections[${sectionCount}][image_decorative]" value="1"> Decorative image (empty alt text)</label>`;
+        block.append(mediaFields);
         initQuill(sectionCount);
         sectionCount++;
     }
@@ -403,7 +330,7 @@
     }
     
     // On form submit, ensure all Quill contents are in hidden inputs
-    document.querySelector('form').addEventListener('submit', function() {
+    document.getElementById('blog-editor-form').addEventListener('submit', function() {
         for (let idx in quillEditors) {
             if(document.getElementById('input-' + idx)) {
                 // To avoid sending empty HTML strings when practically empty
@@ -412,6 +339,10 @@
                 document.getElementById('input-' + idx).value = html;
             }
         }
+    });
+    window.initQuill = initQuill;
+    window.addSection = addSection;
+    window.removeSection = removeSection;
     });
 </script>
 @endpush

@@ -46,6 +46,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('projects', function (Blueprint $table) {
+            $table->dropUnique(['subdomain']);
+            $table->dropUnique(['custom_domain']);
             $table->dropColumn(['workspace_id', 'subdomain', 'custom_domain']);
         });
 
