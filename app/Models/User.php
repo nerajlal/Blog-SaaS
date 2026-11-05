@@ -22,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'current_workspace_id',
     ];
 
     /**
@@ -47,13 +48,25 @@ class User extends Authenticatable
         ];
     }
 
+    public function workspaces()
+    {
+        return $this->belongsToMany(Workspace::class)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function ownedWorkspaces()
+    {
+        return $this->hasMany(Workspace::class, 'owner_id');
+    }
+
+    public function currentWorkspace()
+    {
+        return $this->belongsTo(Workspace::class, 'current_workspace_id');
+    }
+
     public function projects()
     {
         return $this->hasMany(Project::class);
-    }
-
-    public function blogs()
-    {
-        return $this->hasMany(Blog::class);
     }
 }

@@ -9,11 +9,24 @@ class Project extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'name', 'description', 'api_key'];
+    protected $fillable = [
+        'user_id',
+        'workspace_id',
+        'name',
+        'subdomain',
+        'custom_domain',
+        'description',
+        'api_key',
+    ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function workspace()
+    {
+        return $this->belongsTo(Workspace::class);
     }
 
     public function blogs()
