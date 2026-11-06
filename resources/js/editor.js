@@ -1,3 +1,4 @@
+import './editor-autosave';
 import './seo-preview';
 import './seo-analysis';
 import Quill from 'quill';

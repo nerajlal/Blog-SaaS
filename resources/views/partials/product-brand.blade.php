@@ -1,0 +1,1 @@
+<a class="product-brand {{ $brandClass ?? '' }}" href="{{ $brandHref ?? route('home') }}" aria-label="BlogSaaS home"><span class="product-mark" aria-hidden="true">b<span>·</span></span><span>Blog<span class="product-brand-light">SaaS</span></span></a>

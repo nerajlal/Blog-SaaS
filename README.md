@@ -73,3 +73,11 @@ Tests use an isolated in-memory SQLite database. They cover authentication redir
 ## Publishing SEO
 
 Project SEO defaults, DNS domain verification, post metadata/robots/social overrides, image alt text/captions, live previews, a resolved SEO API object, article JSON-LD, and sitemap feed are now implemented. Open a project → **SEO settings** to configure it. Consumer websites must render the metadata and proxy their public-origin sitemaps. See [SEO setup and API documentation](docs/seo.md) and the [runnable PHP consumer](examples/headless-php/README.md). Phase 2 adds separate SEO/readability scores, live editorial guidance, saved revision reports, a content-health dashboard, and audited warning reviews. See [editorial assistant documentation](docs/editorial-analysis.md). Phase 3 adds link inventories/orphan reports, approved internal-link suggestions with undo, queued safe HEAD checks, reviewed redirect and metadata CSV changes, and authenticated consumer 404 telemetry. Open **Links & URLs**; configure a supervised SEO queue worker and the scheduler. See [link and redirect operations](docs/links-and-redirects.md). The first Phase 4 slice adds read-only Google Search Console OAuth, private performance reports/CSV and indexed-version inspection. Google credentials and account consent must be configured separately; see [Search Console setup](docs/search-console.md). IndexNow, GA4, scheduled digests and AI remain future work.
+
+## Editor autosave
+
+Existing-post editors privately autosave text, offer draft recovery, protect against stale tabs and preserve form text on manual-save errors. New image uploads still require Update Post. See [autosave behavior and deployment](docs/editor-autosave.md).
+
+## Product interface
+
+Login, registration, password recovery, the dashboard, project pages and shared editor/SEO screens use the landing page’s light visual style. See [interface structure and deployment](docs/interface.md).

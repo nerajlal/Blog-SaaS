@@ -34,18 +34,20 @@ class ProjectController extends Controller
     public function index()
     {
         $workspace = $this->getCurrentWorkspace();
-        $projects = Project::where('workspace_id', $workspace->id)
+        $projectQuery = Project::where('workspace_id', $workspace->id)
             ->orWhere(function ($query) use ($workspace) {
                 // Backward compatibility for existing projects assigned directly to user
                 $query->where('user_id', Auth::id())->whereNull('workspace_id');
-            })
-            ->withCount('blogs')
+            });
+        $projects = (clone $projectQuery)->withCount('blogs')
             ->latest('id')
             ->paginate(12);
 
+        $storyQuery = \App\Models\Blog::whereIn('project_id', (clone $projectQuery)->select('id'));
+        $stats = ['projects' => $projects->total(), 'stories' => (clone $storyQuery)->count(), 'published' => (clone $storyQuery)->live()->count(), 'drafts' => (clone $storyQuery)->where('status', 'draft')->count()];
         $workspaces = Auth::user()->workspaces;
 
-        return view('admin.projects', compact('projects', 'workspace', 'workspaces'));
+        return view('admin.projects', compact('projects', 'workspace', 'workspaces', 'stats'));
     }
 
     public function store(Request $request)

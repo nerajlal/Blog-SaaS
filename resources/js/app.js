@@ -15,6 +15,32 @@ if (sidebar && sidebarToggle && backdrop) {
     sidebarToggle.addEventListener('click', () => setOpen(sidebarToggle.getAttribute('aria-expanded') !== 'true'));
     backdrop.addEventListener('click', () => { setOpen(false); sidebarToggle.focus(); });
     document.getElementById('sidebar-close')?.addEventListener('click', () => { setOpen(false); sidebarToggle.focus(); });
-    document.addEventListener('keydown', event => { if (event.key === 'Escape') { setOpen(false); sidebarToggle.focus(); } });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && sidebarToggle.getAttribute('aria-expanded') === 'true') { setOpen(false); sidebarToggle.focus(); }
+        if (event.key === 'Tab' && sidebarToggle.getAttribute('aria-expanded') === 'true') {
+            const focusable = [...sidebar.querySelectorAll('a[href],button,input,select,summary')].filter(node => !node.disabled && node.getClientRects().length);
+            const first = focusable[0], last = focusable.at(-1);
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        } });
     window.matchMedia('(min-width: 768px)').addEventListener('change', () => setOpen(false));
 }
+
+// Small shared interactions for the product interface.
+document.querySelectorAll('[data-toggle-password]').forEach(button => {
+    button.addEventListener('click', () => {
+        const input = document.getElementById(button.dataset.togglePassword);
+        if (!input) return;
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        button.textContent = show ? 'Hide' : 'Show';
+        button.setAttribute('aria-label', `${show ? 'Hide' : 'Show'} ${input.name === 'password_confirmation' ? 'confirmation password' : 'password'}`);
+    });
+});
+document.querySelectorAll('[data-dismiss-notice]').forEach(button => button.addEventListener('click', () => button.closest('[role="status"]')?.remove()));
+document.addEventListener('click', event => {
+    document.querySelectorAll('.account-menu[open]').forEach(menu => { if (!menu.contains(event.target)) menu.open = false; });
+});
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') document.querySelectorAll('.account-menu[open]').forEach(menu => { menu.open = false; menu.querySelector('summary').focus(); });
+});

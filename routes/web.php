@@ -88,6 +88,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/projects/{project}/blogs/create', [BlogController::class, 'create'])->name('admin.create-blog');
         Route::post('/projects/{project}/blogs', [BlogController::class, 'store'])->name('admin.blogs.store');
+        Route::get('/blogs/{blog}/autosave', [\App\Http\Controllers\Admin\BlogAutosaveController::class, 'show'])->name('admin.blogs.autosave.show');
+        Route::post('/blogs/{blog}/autosave', [\App\Http\Controllers\Admin\BlogAutosaveController::class, 'store'])->middleware('throttle:40,1')->name('admin.blogs.autosave.store');
+        Route::delete('/blogs/{blog}/autosave', [\App\Http\Controllers\Admin\BlogAutosaveController::class, 'destroy'])->middleware('throttle:10,1')->name('admin.blogs.autosave.destroy');
         Route::get('/blogs/{blog}/edit', [BlogController::class, 'edit'])->name('admin.blogs.edit');
         Route::put('/blogs/{blog}', [BlogController::class, 'update'])->name('admin.blogs.update');
         Route::patch('/blogs/{blog}/toggle-status', [BlogController::class, 'toggleStatus'])->name('admin.blogs.toggle-status');

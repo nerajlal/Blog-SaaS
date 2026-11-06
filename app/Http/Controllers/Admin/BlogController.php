@@ -129,7 +129,8 @@ class BlogController extends Controller
         Gate::authorize('update', $blog->project);
         $project = $blog->project;
         $categories = $project->categories;
-        return view('admin.edit-blog', compact('blog', 'project', 'categories'));
+        $editorRevision = app(\App\Services\Editor\BlogRevision::class)->hash($blog);
+        return response()->view('admin.edit-blog', compact('blog', 'project', 'categories', 'editorRevision'))->header('Cache-Control', 'private, no-store');
     }
 
     public function update(Request $request, Blog $blog)
@@ -139,6 +140,8 @@ class BlogController extends Controller
         $existingImages = $blog->sections()->pluck('image_path')->filter()->all();
 
         $validated = $request->validate(array_merge([
+            'editor_revision' => 'sometimes|required|string|size:64',
+            'autosave_version' => 'sometimes|integer|min:0',
             'title' => 'required|string|max:255',
             'category_id' => ['required', Rule::exists('categories', 'id')->where('project_id', $project->id)],
             'banner_image' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:2048',
@@ -156,6 +159,12 @@ class BlogController extends Controller
         ], SeoInput::blogRules()));
 
         return BlogMedia::transaction(function (BlogMedia $media) use ($request, $blog, $validated) {
+            $current = Blog::whereKey($blog->id)->lockForUpdate()->firstOrFail();
+            abort_unless($current->project_id === $blog->project_id, 409, 'This post moved to another project. Reload before editing.');
+            if (isset($validated['editor_revision'])) {
+                abort_unless(hash_equals(app(\App\Services\Editor\BlogRevision::class)->hash($current), $validated['editor_revision']), 409, 'This post changed in another tab. Your recovery draft is preserved. Review the latest post before updating.');
+            }
+            $blog = $current;
             $previousMedia = array_merge([$blog->cover_image, $blog->author_avatar], $blog->sections()->pluck('image_path')->all());
             if ($request->hasFile('banner_image')) {
                 $coverImagePath = $media->store($request->file('banner_image'), 'blogs/banners');
@@ -223,6 +232,9 @@ class BlogController extends Controller
             BlogMedia::removeAfterCommit(array_diff($previousMedia, $currentMedia));
 
             app(ContentAnalyzer::class)->capture($blog);
+            if (!empty($validated['autosave_version'])) {
+                \App\Models\BlogAutosave::where('project_id', $blog->project_id)->where('blog_id', $blog->id)->where('user_id', $request->user()->id)->where('version', $validated['autosave_version'])->delete();
+            }
             return redirect()->route('admin.project-details', $blog->project_id);
         });
     }

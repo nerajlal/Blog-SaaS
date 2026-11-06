@@ -1,54 +1,17 @@
 @extends('layouts.app')
-
-@section('title', 'Projects - Blog Admin Panel')
-
-@section('header_left')
-    <h1 class="text-xl font-extrabold text-slate-900 uppercase tracking-tight">Projects</h1>
-@endsection
-
+@section('title', 'Your projects — BlogSaaS')
+@section('header_left')<h1>Your workspace <span class="text-slate-300 mx-2" aria-hidden="true">/</span> Projects</h1>@endsection
 @section('content')
 <div class="max-w-6xl mx-auto">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-        <div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight uppercase">Your Projects</h2>
-            <p class="text-slate-500 mt-1 font-medium text-sm sm:text-base">Manage your blog projects and API keys.</p>
-        </div>
-    </div>
-
-    <!-- Projects Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        @foreach ($projects as $project)
-        <!-- Project Card -->
-        <a href="{{ route('admin.project-details', $project->id) }}" class="group bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-xl hover:shadow-brand-500/5 hover:border-brand-200 transition-all duration-300 relative overflow-hidden flex flex-col min-h-[240px]">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-full blur-3xl -mr-16 -mt-16 transition-opacity opacity-0 group-hover:opacity-100"></div>
-            <div class="flex items-start justify-between mb-4 relative z-10">
-                <div class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-brand-50 group-hover:text-brand-500 group-hover:border-brand-100 transition-colors shadow-sm">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-                </div>
-                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-brand-50 text-brand-600 border border-brand-200 uppercase tracking-widest">Active</span>
-            </div>
-            <h3 class="text-xl font-extrabold text-slate-900 mb-2 group-hover:text-brand-600 transition-colors relative z-10">{{ $project->name }}</h3>
-            <p class="text-slate-500 text-sm mb-6 line-clamp-2 font-medium relative z-10 flex-1">{{ $project->description ?? 'No description.' }}</p>
-            <div class="flex items-center justify-between text-sm pt-4 border-t border-slate-100 relative z-10 mt-auto">
-                <span class="text-slate-500 font-medium"><span class="text-slate-900 font-extrabold">{{ $project->blogs_count }}</span> Blogs</span>
-                <span class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Updated {{ $project->updated_at->diffForHumans() }}</span>
-            </div>
-        </a>
-        @endforeach
-
-        @can('createInWorkspace', [\App\Models\Project::class, $workspace])
-        <!-- Empty State / Create New -->
-        <form action="{{ route('admin.projects.store') }}" method="POST" class="bg-white border-2 border-dashed border-slate-300 hover:border-brand-300 hover:bg-brand-50/30 rounded-2xl p-6 flex flex-col items-center justify-center transition-all group min-h-[240px]">
-            @csrf
-            <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 mb-4 group-hover:text-brand-500 group-hover:bg-brand-100 transition-colors shadow-sm ring-1 ring-slate-200 group-hover:ring-brand-200">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            </div>
-            <input type="text" name="name" placeholder="New Project Name" required class="w-full mb-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 font-medium focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-shadow">
-            <input type="text" name="description" placeholder="Description..." class="w-full mb-4 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 font-medium focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-shadow">
-            <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-colors">Create Project</button>
-        </form>
-        @endcan
+    <div class="dashboard-intro"><div><p class="product-eyebrow"><span class="product-status-dot"></span> {{ $workspace->name }}</p><h2>Your ideas, in motion.</h2><p class="dashboard-subtitle">A little inspiration. A lot of possibility. Let’s make something worth reading.</p></div>@can('createInWorkspace',[\App\Models\Project::class,$workspace])<a href="#new-project" class="product-button product-button-dark">New project <span aria-hidden="true">＋</span></a>@endcan</div>
+    <div class="dashboard-overview" aria-label="Workspace overview">@foreach(['projects'=>['Projects','A space for every idea',''], 'stories'=>['Total stories','Includes scheduled stories','lilac'], 'published'=>['Published','Out there in the world','mint'], 'drafts'=>['Drafts','Good things in progress','sand']] as $key=>$metric)<div class="dashboard-stat"><span class="dashboard-stat-label"><span class="stat-dot {{ $metric[2] }}" aria-hidden="true"></span>{{ $metric[0] }}</span><strong>{{ number_format($stats[$key]) }}</strong><small>{{ $metric[1] }}</small></div>@endforeach</div>
+    <div class="dashboard-section-heading"><h3>A place for every project.</h3><span>{{ $projects->total() }} {{ \Illuminate\Support\Str::plural('project',$projects->total()) }} in this workspace</span></div>
+    @if(!$projects->total())<p class="dashboard-empty">Your next chapter starts here. Create a project for your publication, product, or next big idea.</p>@endif
+    <div class="project-grid">
+        @foreach($projects as $project)<a href="{{ route('admin.project-details',$project) }}" class="project-card"><div class="project-card-top"><span class="project-card-icon palette-{{ $loop->index % 3 }}">{{ mb_substr($project->name,0,1) }}</span><span><i class="stat-dot" aria-hidden="true"></i> Your publication</span></div><h4>{{ $project->name }}</h4><p class="project-card-description">{{ $project->description ?: 'A little space for stories, fresh perspectives, and what comes next.' }}</p><div class="project-card-bottom"><span><strong>{{ $project->blogs_count }}</strong> {{ \Illuminate\Support\Str::plural('story',$project->blogs_count) }} <span aria-hidden="true">·</span> Updated {{ $project->updated_at->diffForHumans() }}</span><span aria-hidden="true">↗</span></div></a>@endforeach
+        @can('createInWorkspace',[\App\Models\Project::class,$workspace])<form id="new-project" action="{{ route('admin.projects.store') }}" method="POST" class="project-card project-create-card">@csrf<div class="project-create-title"><span aria-hidden="true">＋</span><h4>Make room for something new.</h4></div><label for="project-name">Project name</label><input id="project-name" name="name" required maxlength="255" value="{{ old('name') }}" placeholder="Your next chapter"><label for="project-description">A little about it <span>(optional)</span></label><input id="project-description" name="description" value="{{ old('description') }}" maxlength="10000" placeholder="What’s the story?"><button type="submit" class="product-button product-button-dark">Create Project <span aria-hidden="true">↗</span></button></form>@endcan
     </div>
     <div class="mt-6">{{ $projects->links() }}</div>
+    <div class="dashboard-tip"><span class="dashboard-tip-icon" aria-hidden="true">✳</span><div><strong>Your content. Any frontend.</strong><p>Write here, publish wherever you feel at home. Every project comes with its own content API.</p></div><a href="{{ route('docs') }}#developers">A little inspiration <span aria-hidden="true">↗</span></a></div>
 </div>
 @endsection

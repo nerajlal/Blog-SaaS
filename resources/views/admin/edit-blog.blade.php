@@ -8,7 +8,7 @@
 
     
     /* Custom styles for file inputs */
-    input[type="file"] {
+    .file-upload-wrapper input[type="file"] {
         display: none;
     }
     .file-upload-wrapper {
@@ -86,17 +86,17 @@
 
 @section('content')
 <div class="max-w-4xl mx-auto">
-    <div class="bg-white text-slate-800 rounded-3xl overflow-hidden shadow-sm border border-slate-200">
-        <div class="py-6 px-4 sm:py-10 sm:px-12">
+    <div class="editor-sheet">
+        <div class="editor-sheet-inner">
             
             <!-- Header Section inside the form -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
                 <div>
-                    <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight uppercase">Edit Blog Post</h2>
-                    <p class="text-slate-500 text-sm mt-1 font-medium">Update the details of your blog post</p>
+                    <p class="product-eyebrow editor-kicker">Your story, taking shape</p><h2 class="editor-page-title">Make every word feel like you.</h2>
+                    <p class="editor-page-copy">Refine your story, shape the details, and share it when you’re ready.</p>
                 </div>
                 <a href="{{ route('admin.project-details', $project->id) }}" class="inline-flex items-center justify-center px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-bold uppercase tracking-wider rounded-full transition-colors border border-slate-200">
-                    Back to List
+                    All stories
                 </a>
             </div>
 
@@ -104,6 +104,8 @@
             <form id="blog-editor-form" action="{{ route('admin.blogs.update', $blog->id) }}" method="POST" enctype="multipart/form-data" class="bg-slate-50 rounded-2xl border border-slate-200 p-4 sm:p-8 shadow-inner">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="editor_revision" value="{{ $editorRevision }}">
+                @include('partials.editor-autosave')
                 
                 <div class="space-y-10">
                     

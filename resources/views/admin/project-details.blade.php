@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Project Details - Blog Admin Panel')
+@section('title', $project->name.' — BlogSaaS')
 
 @section('header_left')
     <a href="{{ route('admin.projects') }}" class="mr-4 text-slate-400 hover:text-brand-600 transition-colors">
@@ -11,8 +11,123 @@
 
 @section('content')
 <div class="max-w-5xl mx-auto space-y-8">
+    <div class="project-hero"><div><p class="product-eyebrow"><span class="product-status-dot"></span> Your publication</p><h2>{{ $project->name }}</h2><p>{{ $project->description ?: 'A thoughtful home for your stories, from the first spark to the moment you hit publish.' }}</p></div><a href="#api-docs" class="product-button product-button-light">Connect your website <span aria-hidden="true">↗</span></a></div>
+    <!-- Stories first; setup stays available below. -->
+    <section class="stories-section">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight uppercase">Your stories</h2>
+            @can('update', $project)
+            <a href="{{ route('admin.create-blog', $project->id) }}" class="inline-flex justify-center px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-bold uppercase tracking-wider transition-colors shadow-lg shadow-brand-500/20 items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                New story
+            </a>
+            @endcan
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm ring-1 ring-slate-200/50">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[600px]" aria-label="Project stories">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase tracking-widest text-slate-500">
+                            <th class="p-5 w-2/5">Title</th>
+                            <th class="p-5">Category</th>
+                            <th class="p-5">Status</th>
+                            <th class="p-5">Date</th>
+                            <th class="p-5 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($blogs as $blog)
+                        <tr class="hover:bg-slate-50 transition-colors group">
+                            <td class="p-5">
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden mr-4 flex-shrink-0 border border-slate-200">
+                                        @if($blog->cover_image)
+                                        <img src="{{ $blog->cover_image }}" alt="Cover" class="w-full h-full object-cover">
+                                        @else
+                                        <div class="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-medium uppercase">No IMG</div>
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <h3 class="text-slate-900 font-bold group-hover:text-brand-600 transition-colors">{{ $blog->title }}</h3>
+                                        <div class="flex items-center mt-2">
+                                            @if($blog->author_avatar)
+                                            <img src="{{ $blog->author_avatar }}" alt="Author" class="w-5 h-5 rounded-full mr-2 object-cover">
+                                            @else
+                                            <div class="w-5 h-5 rounded-full bg-slate-200 mr-2 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
+                                                {{ substr($blog->author_name ?: $blog->user->name, 0, 1) }}
+                                            </div>
+                                            @endif
+                                            <p class="text-slate-500 text-xs font-medium">By {{ $blog->author_name ?: $blog->user->name }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-5">
+                                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider">
+                                    {{ $blog->category ? $blog->category->name : 'Uncategorized' }}
+                                </span>
+                            </td>
+                            <td class="p-5">
+                                @if($blog->status === 'published' && $blog->published_at && $blog->published_at > now())
+                                    <div class="flex flex-col">
+                                        <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Scheduled</span>
+                                        <span class="text-[10px] text-slate-500 font-medium mt-1">{{ $blog->published_at->format('M d, Y h:i A') }}</span>
+                                    </div>
+                                @else
+                                    @can('update', $project)
+                                    <form action="{{ route('admin.blogs.toggle-status', $blog->id) }}" method="POST">
+                                        @csrf
+                                        @method('PATCH')
+                                        <label for="toggle-{{ $blog->id }}" class="flex items-center cursor-pointer select-none">
+                                            <div class="relative">
+                                                <input type="checkbox" id="toggle-{{ $blog->id }}" class="sr-only" onchange="this.form.submit()" {{ $blog->status === 'published' ? 'checked' : '' }}>
+                                                <div class="block w-10 h-6 rounded-full {{ $blog->status === 'published' ? 'bg-brand-500' : 'bg-slate-300' }} transition-colors"></div>
+                                                <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform {{ $blog->status === 'published' ? 'transform translate-x-4' : '' }}"></div>
+                                            </div>
+                                            <div class="ml-3 text-xs font-bold uppercase tracking-widest {{ $blog->status === 'published' ? 'text-brand-600' : 'text-slate-500' }}">
+                                                {{ $blog->status === 'published' ? 'Published' : 'Draft' }}
+                                            </div>
+                                        </label>
+                                    </form>
+                                    @else<span class="text-xs text-slate-500">{{ ucfirst($blog->status) }}</span>@endcan
+                                @endif
+                            </td>
+                            <td class="p-5 text-sm font-medium text-slate-600">{{ $blog->created_at->format('M d, Y') }}</td>
+                            <td class="p-5 text-right flex justify-end space-x-2">
+                                @can('update', $project)
+                                <a href="{{ route('admin.blogs.edit', $blog->id) }}" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-colors inline-block" title="Edit Blog">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                </a>
+                                <button type="button"
+                                    onclick="openMoveModal({{ $blog->id }}, {{ json_encode($blog->title) }}, {{ json_encode($blog->category ? $blog->category->name : '') }})"
+                                    class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors inline-block"
+                                    title="Move to another project">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                </button>
+                                <form action="{{ route('admin.blogs.destroy', $blog->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this blog?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors" title="Delete Blog">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </form>
+                                @else<span class="text-xs text-slate-400">Read only</span>@endcan
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="5" class="p-8 text-center text-slate-500 font-medium">No blogs created yet.</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="mt-6">{{ $blogs->links() }}</div>
+    </section>
     
-    <section class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-white border border-slate-200 rounded-2xl p-6">
+    <section class="project-tools bg-white border border-slate-200 rounded-2xl p-6">
         <div><h2 class="font-bold text-lg">Search appearance</h2><p class="text-sm text-slate-500 mt-1">{{ $project->seo_verified_at ? 'Public domain verified. Set up your frontend to render SEO metadata and proxy the sitemap.' : 'Configure publication defaults and verify your public domain to enable canonical URLs and sitemaps.' }}</p></div>
         <div class="flex flex-wrap gap-2 shrink-0"><a href="{{ route('admin.links.index', $project) }}" class="border border-slate-300 bg-white font-semibold text-sm px-5 py-3 rounded-full">Links & URLs ↗</a><a href="{{ route('admin.seo.health', $project) }}" class="border border-slate-300 bg-white font-semibold text-sm px-5 py-3 rounded-full">Content health ↗</a>
         @can('manageSeo', $project)<a href="{{ route('admin.search.index',$project) }}" class="border border-slate-300 font-semibold text-sm px-5 py-3 rounded-full">Search performance ↗</a><a href="{{ route('admin.projects.seo', $project) }}" class="shrink-0 bg-blue-600 text-white font-semibold text-sm px-5 py-3 rounded-full">SEO settings ↗</a>@endcan</div>
@@ -193,120 +308,7 @@ if (isset($data['blogs'])) {
         </div>
     </section>
 
-    <!-- Blogs List Section -->
-    <section>
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight uppercase">Blog posts</h2>
-            @can('update', $project)
-            <a href="{{ route('admin.create-blog', $project->id) }}" class="inline-flex justify-center px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-bold uppercase tracking-wider transition-colors shadow-lg shadow-brand-500/20 items-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Create Blog
-            </a>
-            @endcan
-        </div>
-        
-        <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm ring-1 ring-slate-200/50">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[600px]">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase tracking-widest text-slate-500">
-                            <th class="p-5 w-2/5">Title</th>
-                            <th class="p-5">Category</th>
-                            <th class="p-5">Status</th>
-                            <th class="p-5">Date</th>
-                            <th class="p-5 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @forelse($blogs as $blog)
-                        <tr class="hover:bg-slate-50 transition-colors group">
-                            <td class="p-5">
-                                <div class="flex items-center">
-                                    <div class="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden mr-4 flex-shrink-0 border border-slate-200">
-                                        @if($blog->cover_image)
-                                        <img src="{{ $blog->cover_image }}" alt="Cover" class="w-full h-full object-cover">
-                                        @else
-                                        <div class="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 text-xs font-medium uppercase">No IMG</div>
-                                        @endif
-                                    </div>
-                                    <div>
-                                        <h3 class="text-slate-900 font-bold group-hover:text-brand-600 transition-colors">{{ $blog->title }}</h3>
-                                        <div class="flex items-center mt-2">
-                                            @if($blog->author_avatar)
-                                            <img src="{{ $blog->author_avatar }}" alt="Author" class="w-5 h-5 rounded-full mr-2 object-cover">
-                                            @else
-                                            <div class="w-5 h-5 rounded-full bg-slate-200 mr-2 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
-                                                {{ substr($blog->author_name ?: $blog->user->name, 0, 1) }}
-                                            </div>
-                                            @endif
-                                            <p class="text-slate-500 text-xs font-medium">By {{ $blog->author_name ?: $blog->user->name }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-5">
-                                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider">
-                                    {{ $blog->category ? $blog->category->name : 'Uncategorized' }}
-                                </span>
-                            </td>
-                            <td class="p-5">
-                                @if($blog->status === 'published' && $blog->published_at && $blog->published_at > now())
-                                    <div class="flex flex-col">
-                                        <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Scheduled</span>
-                                        <span class="text-[10px] text-slate-500 font-medium mt-1">{{ $blog->published_at->format('M d, Y h:i A') }}</span>
-                                    </div>
-                                @else
-                                    @can('update', $project)
-                                    <form action="{{ route('admin.blogs.toggle-status', $blog->id) }}" method="POST">
-                                        @csrf
-                                        @method('PATCH')
-                                        <label for="toggle-{{ $blog->id }}" class="flex items-center cursor-pointer select-none">
-                                            <div class="relative">
-                                                <input type="checkbox" id="toggle-{{ $blog->id }}" class="sr-only" onchange="this.form.submit()" {{ $blog->status === 'published' ? 'checked' : '' }}>
-                                                <div class="block w-10 h-6 rounded-full {{ $blog->status === 'published' ? 'bg-brand-500' : 'bg-slate-300' }} transition-colors"></div>
-                                                <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform {{ $blog->status === 'published' ? 'transform translate-x-4' : '' }}"></div>
-                                            </div>
-                                            <div class="ml-3 text-xs font-bold uppercase tracking-widest {{ $blog->status === 'published' ? 'text-brand-600' : 'text-slate-500' }}">
-                                                {{ $blog->status === 'published' ? 'Published' : 'Draft' }}
-                                            </div>
-                                        </label>
-                                    </form>
-                                    @else<span class="text-xs text-slate-500">{{ ucfirst($blog->status) }}</span>@endcan
-                                @endif
-                            </td>
-                            <td class="p-5 text-sm font-medium text-slate-600">{{ $blog->created_at->format('M d, Y') }}</td>
-                            <td class="p-5 text-right flex justify-end space-x-2">
-                                @can('update', $project)
-                                <a href="{{ route('admin.blogs.edit', $blog->id) }}" class="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-colors inline-block" title="Edit Blog">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                </a>
-                                <button type="button" 
-                                    onclick="openMoveModal({{ $blog->id }}, {{ json_encode($blog->title) }}, {{ json_encode($blog->category ? $blog->category->name : '') }})" 
-                                    class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors inline-block" 
-                                    title="Move to another project">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                                </button>
-                                <form action="{{ route('admin.blogs.destroy', $blog->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this blog?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors" title="Delete Blog">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                    </button>
-                                </form>
-                                @else<span class="text-xs text-slate-400">Read only</span>@endcan
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="5" class="p-8 text-center text-slate-500 font-medium">No blogs created yet.</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="mt-6">{{ $blogs->links() }}</div>
-    </section>
+
 </div>
 
 <!-- Move Blog Modal -->
