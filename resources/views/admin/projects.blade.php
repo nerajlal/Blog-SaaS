@@ -21,10 +21,10 @@
                     @endcan
                 </div>
                 <p class="project-card-description">{{ $project->description ?: 'A little space for stories, fresh perspectives, and what comes next.' }}</p>
-                <div class="project-card-bottom"><span><strong>{{ $project->blogs_count }}</strong> {{ \Illuminate\Support\Str::plural('story',$project->blogs_count) }} <span aria-hidden="true">·</span> Updated {{ $project->updated_at->diffForHumans() }}</span><a href="{{ route('admin.project-details', $project) }}" aria-label="Open {{ $project->name }}">↗</a></div>
+                <div class="project-card-bottom"><span><strong>{{ $project->blogs_count }}</strong> {{ \Illuminate\Support\Str::plural('story',$project->blogs_count) }} <span aria-hidden="true">·</span> Updated {{ $project->updated_at->diffForHumans() }}</span></div>
                 <div class="project-card-actions">
-                    <a href="{{ route('admin.project-details', $project) }}" class="product-button product-button-dark">Blogs</a>
-                    <a href="{{ route('admin.projects.integration', $project) }}" class="product-button product-button-light">Integration</a>
+                    <a href="{{ route('admin.project-details', $project) }}" class="project-action project-action-primary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg>Blogs</a>
+                    <a href="{{ route('admin.projects.integration', $project) }}" class="project-action project-action-secondary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 8-4 4 4 4m8-8 4 4-4 4m-3-11-2 14"/></svg>Integration</a>
                 </div>
             </div>
             @can('delete', $project)
