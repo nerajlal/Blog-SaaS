@@ -85,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/projects/{project}/seo/verify', [\App\Http\Controllers\Admin\ProjectSeoController::class, 'verify'])->middleware('throttle:5,1')->name('admin.projects.seo.verify');
 
         Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('admin.projects.destroy');
+        Route::get('/projects/{project}/integration', [ProjectController::class, 'show'])->name('admin.projects.integration');
         Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('admin.project-details');
 
         Route::get('/projects/{project}/blogs/create', [BlogController::class, 'create'])->name('admin.create-blog');

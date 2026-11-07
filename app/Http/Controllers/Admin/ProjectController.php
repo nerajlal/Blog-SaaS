@@ -129,6 +129,8 @@ class ProjectController extends Controller
 
         $workspaces = Auth::user()->workspaces;
 
-        return view('admin.project-details', compact('project', 'blogs', 'otherProjects', 'workspace', 'workspaces'));
+        $integrationView = request()->routeIs('admin.projects.integration');
+
+        return view('admin.project-details', compact('project', 'blogs', 'otherProjects', 'workspace', 'workspaces', 'integrationView'));
     }
 }

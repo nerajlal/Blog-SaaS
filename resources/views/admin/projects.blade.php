@@ -22,6 +22,10 @@
                 </div>
                 <p class="project-card-description">{{ $project->description ?: 'A little space for stories, fresh perspectives, and what comes next.' }}</p>
                 <div class="project-card-bottom"><span><strong>{{ $project->blogs_count }}</strong> {{ \Illuminate\Support\Str::plural('story',$project->blogs_count) }} <span aria-hidden="true">·</span> Updated {{ $project->updated_at->diffForHumans() }}</span><a href="{{ route('admin.project-details', $project) }}" aria-label="Open {{ $project->name }}">↗</a></div>
+                <div class="project-card-actions">
+                    <a href="{{ route('admin.project-details', $project) }}" class="product-button product-button-dark">Blogs</a>
+                    <a href="{{ route('admin.projects.integration', $project) }}" class="product-button product-button-light">Integration</a>
+                </div>
             </div>
             @can('delete', $project)
             <dialog id="delete-dialog-{{ $project->id }}" class="project-delete-dialog" aria-labelledby="delete-title-{{ $project->id }}">

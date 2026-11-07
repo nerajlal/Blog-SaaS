@@ -11,8 +11,8 @@
 
 @section('content')
 <div class="max-w-5xl mx-auto space-y-8">
-    <div class="project-hero"><div><p class="product-eyebrow"><span class="product-status-dot"></span> Your publication</p><h2>{{ $project->name }}</h2><p>{{ $project->description ?: 'A thoughtful home for your stories, from the first spark to the moment you hit publish.' }}</p></div><a href="#api-docs" class="product-button product-button-light">Connect your website <span aria-hidden="true">↗</span></a></div>
-    <!-- Stories first; setup stays available below. -->
+    <div class="project-hero"><div><p class="product-eyebrow"><span class="product-status-dot"></span> Your publication</p><h2>{{ $project->name }}</h2><p>{{ $project->description ?: 'A thoughtful home for your stories, from the first spark to the moment you hit publish.' }}</p></div><a href="{{ $integrationView ? route('admin.project-details', $project) : route('admin.projects.integration', $project) }}" class="product-button product-button-light">{{ $integrationView ? 'Blogs' : 'Integration' }} <span aria-hidden="true">↗</span></a></div>
+    @if(!$integrationView)
     <section class="stories-section">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
             <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight uppercase">Your stories</h2>
@@ -127,6 +127,8 @@
         <div class="mt-6">{{ $blogs->links() }}</div>
     </section>
     
+    @endif
+    @if($integrationView)
     <section class="project-tools bg-white border border-slate-200 rounded-2xl p-6">
         <div><h2 class="font-bold text-lg">Search appearance</h2><p class="text-sm text-slate-500 mt-1">{{ $project->seo_verified_at ? 'Public domain verified. Set up your frontend to render SEO metadata and proxy the sitemap.' : 'Configure publication defaults and verify your public domain to enable canonical URLs and sitemaps.' }}</p></div>
         <div class="flex flex-wrap gap-2 shrink-0"><a href="{{ route('admin.links.index', $project) }}" class="border border-slate-300 bg-white font-semibold text-sm px-5 py-3 rounded-full">Links & URLs ↗</a><a href="{{ route('admin.seo.health', $project) }}" class="border border-slate-300 bg-white font-semibold text-sm px-5 py-3 rounded-full">Content health ↗</a>
@@ -271,6 +273,8 @@ if (isset($data['blogs'])) {
             </div>
         </details>
     </section>
+    @endif
+    @if(!$integrationView)
 
     <!-- Categories Section -->
     <section>
@@ -307,6 +311,7 @@ if (isset($data['blogs'])) {
             </div>
         </div>
     </section>
+    @endif
 
 
 </div>

@@ -32,6 +32,9 @@ class WorkspaceOverviewTest extends TestCase
         // The Blade project-card loop must not create an arbitrary sidebar project context.
         $response->assertDontSee(route('admin.projects.seo', $project));
         $this->get('/admin/projects/'.$project->id)->assertOk()->assertSee(route('admin.projects.seo', $project));
+        $this->get(route('admin.project-details', $project))->assertOk()->assertSee('Your stories')->assertDontSee('id="api-docs"', false)->assertDontSee('Search appearance');
+        $this->get(route('admin.projects.integration', $project))->assertOk()->assertSee('id="api-docs"', false)->assertSee('Search appearance')->assertDontSee('aria-label="Project stories"', false);
+        $this->actingAs($other)->get(route('admin.projects.integration', $project))->assertForbidden();
         $this->assertSame(4, Blog::count());
     }
 }

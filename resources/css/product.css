@@ -2368,3 +2368,6 @@
 .project-delete-dialog input { width: 100%; min-width: 0; }
 .project-delete-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 .project-delete-button { background: #a32938; color: white; }
+
+.project-card-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.project-card-actions .product-button { flex: 1; padding: 10px 12px; font-size: 12px; justify-content: center; }
