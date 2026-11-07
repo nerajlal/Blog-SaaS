@@ -21,6 +21,7 @@
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                 New story
             </a>
+            <a href="{{ route('admin.ai.studio', $project) }}" class="product-button product-button-light">Create with AI ✧</a>
             @endcan
         </div>
 
@@ -49,7 +50,7 @@
                                         @endif
                                     </div>
                                     <div>
-                                        <h3 class="text-slate-900 font-bold group-hover:text-brand-600 transition-colors">{{ $blog->title }}</h3>
+                                        <h3 class="text-slate-900 font-bold group-hover:text-brand-600 transition-colors">{{ $blog->title }}</h3><a class="ai-social-link" href="{{ route('admin.ai.studio', [$project, 'blog' => $blog->id]) }}">Social content & AI tools ↗</a>
                                         <div class="flex items-center mt-2">
                                             @if($blog->author_avatar)
                                             <img src="{{ $blog->author_avatar }}" alt="Author" class="w-5 h-5 rounded-full mr-2 object-cover">

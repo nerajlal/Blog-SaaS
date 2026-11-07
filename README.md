@@ -81,3 +81,7 @@ Existing-post editors privately autosave text, offer draft recovery, protect aga
 ## Product interface
 
 Login, registration, password recovery, the dashboard, project pages and shared editor/SEO screens use the landing page’s light visual style. See [interface structure and deployment](docs/interface.md).
+
+### Claude project knowledge and writing tools
+
+The `ai-based` branch adds approved project profiles, optional website analysis, reviewed outline-to-draft generation, writing suggestions, and companion social content. AI is disabled by default and requires a configured Anthropic account and an `ai` queue worker. See [setup, permissions, quotas, and limitations](docs/ai-tools.md).

@@ -58,3 +58,5 @@ document.querySelectorAll('[data-open-dialog]').forEach(button => {
         button.focus();
     });
 });
+
+import './ai-studio';

@@ -7,7 +7,9 @@
         @if(isset($navigationProject))
         <p class="sidebar-label sidebar-project-name">{{ $navigationProject->name }}</p>
         <a href="{{ route('admin.project-details',$navigationProject) }}" class="workspace-nav-link {{ request()->routeIs('admin.project-details','admin.create-blog','admin.blogs.*') ? 'is-active' : '' }}"><span class="nav-symbol" aria-hidden="true">▤</span> Stories</a>
-        <a href="{{ route('admin.seo.health',$navigationProject) }}" class="workspace-nav-link {{ request()->routeIs('admin.seo.*') ? 'is-active' : '' }}"><span class="nav-symbol" aria-hidden="true">✧</span> Content health</a>
+        <a href="{{ route('admin.ai.profile',$navigationProject) }}" class="workspace-nav-link {{ request()->routeIs('admin.ai.profile*') ? 'is-active' : '' }}"><span class="nav-symbol" aria-hidden="true">◇</span> Project details</a>
+        <a href="{{ route('admin.ai.studio',$navigationProject) }}" class="workspace-nav-link {{ request()->routeIs('admin.ai.*') && !request()->routeIs('admin.ai.profile*') ? 'is-active' : '' }}"><span class="nav-symbol" aria-hidden="true">✧</span> AI studio</a>
+        <a href="{{ route('admin.seo.health' ,$navigationProject) }}" class="workspace-nav-link {{ request()->routeIs('admin.seo.*') ? 'is-active' : '' }}"><span class="nav-symbol" aria-hidden="true">✧</span> Content health</a>
         <a href="{{ route('admin.links.index',$navigationProject) }}" class="workspace-nav-link {{ request()->routeIs('admin.links.*','admin.redirects.*','admin.telemetry.*','admin.metadata.*') ? 'is-active' : '' }}"><span class="nav-symbol" aria-hidden="true">↗</span> Links & URLs</a>
         @can('manageSeo',$navigationProject)<a href="{{ route('admin.search.index',$navigationProject) }}" class="workspace-nav-link {{ request()->routeIs('admin.search.*') ? 'is-active' : '' }}"><span class="nav-symbol" aria-hidden="true">▥</span> Search performance</a><a href="{{ route('admin.projects.seo',$navigationProject) }}" class="workspace-nav-link {{ request()->routeIs('admin.projects.seo*') ? 'is-active' : '' }}"><span class="nav-symbol" aria-hidden="true">⚙</span> SEO settings</a>@endcan
         @endif

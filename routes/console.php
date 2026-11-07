@@ -9,3 +9,5 @@ Artisan::command('inspire', function () {
 
 \Illuminate\Support\Facades\Schedule::command('seo:prune-links')->daily();
 \Illuminate\Support\Facades\Schedule::command('seo:prune-search')->daily();
+
+\Illuminate\Support\Facades\Schedule::command('ai:maintain')->everyFiveMinutes()->withoutOverlapping();

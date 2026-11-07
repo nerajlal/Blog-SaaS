@@ -85,6 +85,20 @@ Route::middleware('auth')->group(function () {
         Route::post('/projects/{project}/seo/verify', [\App\Http\Controllers\Admin\ProjectSeoController::class, 'verify'])->middleware('throttle:5,1')->name('admin.projects.seo.verify');
 
         Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('admin.projects.destroy');
+        Route::get('/projects/{project}/details', [\App\Http\Controllers\Admin\AiController::class, 'profile'])->name('admin.ai.profile');
+        Route::put('/projects/{project}/details', [\App\Http\Controllers\Admin\AiController::class, 'saveProfile'])->name('admin.ai.profile.save');
+        Route::post('/projects/{project}/details/approve', [\App\Http\Controllers\Admin\AiController::class, 'approve'])->name('admin.ai.profile.approve');
+        Route::put('/projects/{project}/ai/settings', [\App\Http\Controllers\Admin\AiController::class, 'settings'])->name('admin.ai.settings');
+        Route::get('/projects/{project}/ai', [\App\Http\Controllers\Admin\AiController::class, 'studio'])->name('admin.ai.studio');
+        Route::post('/projects/{project}/ai', [\App\Http\Controllers\Admin\AiController::class, 'generate'])->middleware('throttle:10,1')->name('admin.ai.generate');
+        Route::get('/projects/{project}/ai/{run}', [\App\Http\Controllers\Admin\AiController::class, 'run'])->name('admin.ai.run');
+        Route::get('/projects/{project}/ai/{run}/status', [\App\Http\Controllers\Admin\AiController::class, 'status'])->name('admin.ai.status');
+        Route::put('/projects/{project}/ai/{run}', [\App\Http\Controllers\Admin\AiController::class, 'editResult'])->name('admin.ai.result.save');
+        Route::post('/projects/{project}/ai/{run}/draft', [\App\Http\Controllers\Admin\AiController::class, 'saveDraft'])->name('admin.ai.draft');
+        Route::post('/projects/{project}/ai/{run}/adopt', [\App\Http\Controllers\Admin\AiController::class, 'adopt'])->name('admin.ai.adopt');
+        Route::post('/projects/{project}/ai/{run}/cancel', [\App\Http\Controllers\Admin\AiController::class, 'cancel'])->name('admin.ai.cancel');
+        Route::get('/projects/{project}/ai/{run}/export', [\App\Http\Controllers\Admin\AiController::class, 'export'])->name('admin.ai.export');
+
         Route::get('/projects/{project}/integration', [ProjectController::class, 'show'])->name('admin.projects.integration');
         Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('admin.project-details');
 

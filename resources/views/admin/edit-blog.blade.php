@@ -85,6 +85,7 @@
 @endsection
 
 @section('content')
+<div class="ai-editor-entry"><a href="{{ route('admin.ai.studio', [$project, 'blog' => $blog->id]) }}" class="product-button product-button-light">AI writing & social content ✧</a><span>Save your latest changes before generating suggestions.</span></div>
 <div class="max-w-4xl mx-auto">
     <div class="editor-sheet">
         <div class="editor-sheet-inner">

@@ -2377,3 +2377,46 @@
 .project-action-secondary { flex: 1.25; background: transparent; border: 1px solid #e3ebef; color: #566771; }
 .project-action-secondary:hover { background: #f4f8fa; border-color: #cddde8; }
 .project-action:focus-visible { outline: 2px solid #3458aa; outline-offset: 3px; }
+
+/* Project knowledge and AI writing tools share the product's quiet card language. */
+.project-details-link { display: inline-flex; justify-content: space-between; gap: 12px; color: #637582; font-size: 12px; text-decoration: none; margin-top: 14px; }
+.project-details-link:hover, .ai-social-link:hover { color: #3458aa; }
+.ai-social-link { display: inline-block; color: #637582; font-size: 12px; margin-top: 8px; }
+.ai-page { max-width: 1120px; margin: 0 auto; display: grid; gap: 24px; }
+.ai-two-columns { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.ai-panel { background: #fff; border: 1px solid #e3ebef; border-radius: 20px; padding: 26px; min-width: 0; }
+.ai-panel h3 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 19px; font-weight: 650; margin: 0 0 14px; letter-spacing: -.5px; }
+.ai-panel p { line-height: 1.7; font-size: 14px; overflow-wrap: anywhere; }
+.ai-muted { color: #71818b; margin: 8px 0 16px; }
+.ai-side-stack { display: grid; gap: 20px; min-width: 0; }
+.ai-form { display: grid; gap: 10px; margin-top: 18px; }
+.ai-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 10px; }
+.ai-form fieldset:disabled { opacity: .65; }
+.ai-form label { color: #42565f; font-size: 13px; font-weight: 600; margin-top: 8px; }
+.ai-form input:not([type=checkbox]):not([type=hidden]), .ai-form textarea, .ai-form select { width: 100%; min-width: 0; border: 1px solid #dce6ec; border-radius: 10px; background: #fbfdff; color: #21333d; padding: 11px 12px; font: inherit; font-size: 14px; box-sizing: border-box; }
+.ai-form textarea { resize: vertical; min-height: 85px; line-height: 1.6; }
+.ai-form .ai-check { display: flex; align-items: flex-start; gap: 10px; font-weight: 400; line-height: 1.6; }
+.ai-check input { flex-shrink: 0; margin-top: 4px; }
+.ai-form .product-button { margin-top: 10px; justify-self: start; }
+.ai-notice { border: 1px solid #dce8f6; background: #eef5fc; color: #466078; padding: 16px 20px; border-radius: 14px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.ai-notice a { text-decoration: underline; }
+.ai-warning { background: #fff7e9; border-color: #f2dfb8; color: #805c24; }
+.ai-badge { display: inline-flex; background: #edf4fb; color: #536d85; border-radius: 7px; padding: 6px 9px; font-size: 11px; line-height: 1.5; }
+.ai-status-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: #71818b; font-size: 13px; }
+.ai-run-list > a { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid #edf1f5; padding: 16px 0; text-decoration: none; color: #253f4d; }
+.ai-run-list small { display: block; color: #71818b; margin-top: 5px; font-size: 11px; }
+.ai-context { font-size: 12px; line-height: 1.7; margin-top: 16px; }
+.ai-context dt { font-weight: 650; margin-top: 12px; }
+.ai-context dd, .ai-context pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; margin: 0; }
+.ai-panel details { margin-top: 16px; }
+.ai-panel summary { font-size: 13px; color: #466078; cursor: pointer; }
+.ai-approved p { white-space: pre-wrap; font-size: 12px; }
+.ai-approved h4 { margin-top: 14px; font-size: 12px; font-weight: 700; }
+.ai-copy { font-size: 12px; color: #3458aa; background: transparent; border: 0; cursor: pointer; justify-self: start; padding: 4px 0; }
+.ai-editor-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 0 auto 24px; max-width: 1100px; }
+.ai-editor-entry span { color: #71818b; font-size: 12px; }
+@media (max-width: 1000px) { .ai-two-columns { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) { .ai-panel { padding: 19px; } .ai-run-list > a { align-items: flex-start; flex-direction: column; } }
+
+.ai-card-state { font-size: 10px; color: #7b8f9a; }
+.ai-profile-extra { display: grid; gap: 10px; margin-top: 14px; }

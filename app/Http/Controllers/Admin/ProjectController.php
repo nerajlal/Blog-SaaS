@@ -40,6 +40,10 @@ class ProjectController extends Controller
                 $query->where('user_id', Auth::id())->whereNull('workspace_id');
             });
         $projects = (clone $projectQuery)->withCount('blogs')
+            ->addSelect([
+                'ai_profile_revision' => \App\Models\AiProfile::select('revision')->whereColumn('project_id', 'projects.id')->limit(1),
+                'ai_approved_revision' => \App\Models\AiProfileVersion::select('revision')->whereColumn('project_id', 'projects.id')->orderByDesc('id')->limit(1),
+            ])
             ->latest('id')
             ->paginate(12);
 
