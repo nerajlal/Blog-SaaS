@@ -14,3 +14,11 @@
 /bootstrap/cache/*.php
 /.phpunit.result.cache
 /.DS_Store
+
+# Django runtime, private configuration, and Python artifacts
+/.venv/
+/.local/
+/.env.django
+__pycache__/
+*.py[cod]
+!/.env.django.example

@@ -1,87 +1,53 @@
-# BlogSaaS
+# BlogSaaS — Django edition
 
-Laravel 12 / PHP 8.2+ headless publishing application. Users organize projects in workspaces, write rich-text/image sections, categorize posts, and publish immediately or on a schedule. Published content is available through a read-only REST API. The responsive landing page takes visual inspiration from https://task19.com/ while using original BlogSaaS content and UI illustrations.
+Branch **`python`** is the Django conversion of `ai-based`. The active Python application is `blogsaas/` + `portal/`, started with `manage.py`. The existing PHP files are retained as migration/reference material; they are not called by Django. `main` and `ai-based` remain separate.
 
-## Local setup
+## Run locally
 
-Requires PHP 8.2+ (including PDO for your database, DOM, mbstring, fileinfo, OpenSSL), Composer, and Node.js 22.12+.
+Python 3.12 or newer is recommended. No PHP, Composer, npm, Redis, or external API credentials are required to run the Django app locally.
 
-```sh
-composer install
-cp .env.example .env
-php artisan key:generate
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.lock
+cp .env.django.example .env.django
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8001
 ```
 
-Configure your database in `.env`. For SQLite, create `database/database.sqlite`, then:
+Open **http://127.0.0.1:8001**, then register an account. Port 8001 avoids colliding with an existing Laravel server on 8000. Django uses `.env.django` and `.local/db.sqlite3` by default; it does not read Laravel's `.env` or connect to its existing database. Local-only secret material is generated under ignored `.local/` when DEBUG is enabled; keep it stable to read encrypted local data.
 
-```sh
-php artisan migrate
-npm ci
-npm run build
-php artisan serve
+Run the database worker in another terminal:
+
+```bash
+source .venv/bin/activate
+python manage.py work
 ```
 
-`composer dev` runs the development server, queue listener, logs, and Vite. Demo data is optional: `php artisan db:seed` creates `admin@gmail.com` / `password`, and is deliberately disabled in production. Never seed demo data on a live installation. Rerunning this seeder replaces demo data and rotates the demo project's key.
+One worker processes AI requests, link graph/check jobs, Search Console reports, and URL inspections. Jobs are claimed atomically and are not automatically retried after an ambiguous provider failure. No paid provider call happens until the administrator explicitly configures and enables the service.
 
-## Permissions and content
+## Included application areas
 
-Workspace owners, admins, and editors can manage projects and posts. Members have read-only project access. Workspace membership is checked independently of original project/post authorship. Legacy projects without a workspace remain accessible to their original owner. Workspace switching and creation are available in the sidebar; mobile navigation includes the same controls. Team invitation and role-management screens are not implemented.
+- Landing page, registration, login/logout, password reset and workspace switching/creation.
+- Workspace roles, project creation/deletion, categories, story sections, sanitized rich text, validated media uploads, scheduling, project moves and private versioned autosave.
+- Separate Blogs and Integration screens, project API keys, published-only paginated JSON API and verified-domain sitemap.
+- SEO defaults/overrides, TXT domain verification, canonical/social metadata and schema, content-health snapshots/reviews, cornerstone fields, internal-link graph/suggestions, guarded insertion/undo and queued public link checks.
+- Reviewed metadata/redirect CSV changes with expiry and guarded undo, redirect lookup, secret-authenticated deduplicated 404 telemetry.
+- Read-only Search Console OAuth, verified matching properties, queued performance reports and URL inspection, CSV export.
+- Approved encrypted project profiles, optional protected website analysis, Claude outline→reviewed private draft generation, writing suggestions, LinkedIn/Reddit/Facebook/Instagram text, review/export, quotas, cancellation and stale-source checks.
 
-Uploads accept JPG, PNG, GIF, or WebP files up to 2 MB each. This repository deliberately stores public images in `public/storage`; **do not run `storage:link`** with this disk configuration. Keep the tracked `.htaccess` in that directory. On Nginx or another server, explicitly prohibit script execution in `/storage/` and serve it only as static content. Include `public/storage` in persistent storage and backups.
+The implementation is a native Django rewrite, not a line-for-line PHP transpilation. SEO scoring uses versioned Django rules and should be recomputed after import. Backend form/action endpoints use Django CSRF-protected POST forms; public read API URLs and the SEO response contract are preserved.
 
-Section HTML is sanitized on write and on read, including legacy content. Script/event attributes, embeds, and inline images are removed. Use the section image field for images. Basic headings, paragraphs, lists, emphasis, safe links, and supported alignment are preserved. Font colors, embedded video, and arbitrary inline styles are not supported.
+## Validate
 
-Blog/section changes use transactions. New uploads are removed if saving fails; superseded images are deleted after a successful commit. Existing unrelated orphan files are not automatically purged. Titles can be changed without changing an existing post's slug.
-
-Publication times use the application's configured timezone (UTC by default), displayed beside the editor. Scheduled posts are filtered by `published_at` at request time; no scheduler is required. Cached/static frontends must revalidate to show newly published content.
-
-## API
-
-```sh
-curl 'https://your-domain.example/api/v1/projects/blogs?per_page=20&page=1' \
-  -H 'Accept: application/json' \
-  -H 'X-API-KEY: YOUR_PROJECT_KEY'
+```bash
+python manage.py check
+python manage.py test portal
+python manage.py check_parity
+python manage.py makemigrations --check --dry-run
+python manage.py collectstatic --noinput
 ```
 
-The response includes `project`, a `blogs` array with `sections` and `category`, and `meta` (`current_page`, `last_page`, `per_page`, `total`). Default page size is 20, maximum 100. **Existing integrations must paginate** if they previously expected every post in one response. Only published posts whose publication date has arrived are returned. Drafts and future posts remain private.
+Browser QA uses a separate fixture database and mocks are used for paid/external integrations. `check_parity` verifies route coverage, not an assertion of identical internals or exhaustive production compatibility.
 
-Project keys are public, read-only identifiers, not credentials for modifying content. Query-string keys remain supported for compatibility; prefer the header to keep keys out of URLs. CORS allows cross-origin GET/OPTIONS without credentials. The API uses stateless middleware with a 120 requests/minute per-IP limit. The separate server-to-server 404 endpoint requires a private telemetry key and has an additional 60 requests/minute limit; it is not enabled for browser CORS. Login allows 5 attempts/minute, registration 3/minute, and password recovery 5/minute.
-
-## Production deployment
-
-1. Configure the web server document root to **this repository's `public/` directory**. Never expose the repository root, SQL dumps, `.env`, or `vendor` as public files. Configure TLS and upload execution restrictions.
-2. Set `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://your-domain`, `SESSION_SECURE_COOKIE=true`, and `SESSION_ENCRYPT=true`. Preserve the application key between deployments. Configure real database credentials and a shared cache/session store when using multiple instances.
-3. Configure a real mail transport and sender, then verify delivery of password reset emails. The default `log` mailer does not deliver email.
-4. Back up the database and uploaded media. Run `composer install --no-dev --optimize-autoloader`, `npm ci`, and `npm run build` during deployment. Deploy the resulting `public/build` directory with the application. Remove any development `public/hot` file.
-5. Review existing workspace references before applying the new foreign-key migration. Resolve orphan references if any, then run `php artisan migrate --force` and `php artisan optimize`. Do not seed demo accounts.
-6. Run `php artisan app:production-check`. It is read-only and exits nonzero when required settings, migrations, assets, or database checks fail. A passing command is not a substitute for checking the actual host's TLS, file permissions, static upload rules, SMTP delivery, monitoring, and backup restoration.
-7. Verify registration/login, password recovery, project creation, editing, media uploads, scheduling, tenant isolation, and API requests on staging. Remove or secure any existing demo account before launch.
-
-Billing, subscription enforcement, custom-domain routing, and team invitations are not implemented. Subdomain/custom-domain columns alone do not provide hosted blog sites. This is a headless publishing application, not a completed subscription billing platform.
-
-## Verification
-
-```sh
-php artisan test
-npm run build
-composer audit --locked
-npm audit
-```
-
-Tests use an isolated in-memory SQLite database. They cover authentication redirects, registration, password reset token lifecycle, throttling, workspace permissions, tenant isolation, category scoping, unsafe uploads, scheduling, sanitized content, API pagination, and CORS.
-
-## Publishing SEO
-
-Project SEO defaults, DNS domain verification, post metadata/robots/social overrides, image alt text/captions, live previews, a resolved SEO API object, article JSON-LD, and sitemap feed are now implemented. Open a project → **SEO settings** to configure it. Consumer websites must render the metadata and proxy their public-origin sitemaps. See [SEO setup and API documentation](docs/seo.md) and the [runnable PHP consumer](examples/headless-php/README.md). Phase 2 adds separate SEO/readability scores, live editorial guidance, saved revision reports, a content-health dashboard, and audited warning reviews. See [editorial assistant documentation](docs/editorial-analysis.md). Phase 3 adds link inventories/orphan reports, approved internal-link suggestions with undo, queued safe HEAD checks, reviewed redirect and metadata CSV changes, and authenticated consumer 404 telemetry. Open **Links & URLs**; configure a supervised SEO queue worker and the scheduler. See [link and redirect operations](docs/links-and-redirects.md). The first Phase 4 slice adds read-only Google Search Console OAuth, private performance reports/CSV and indexed-version inspection. Google credentials and account consent must be configured separately; see [Search Console setup](docs/search-console.md). IndexNow, GA4, scheduled digests and AI remain future work.
-
-## Editor autosave
-
-Existing-post editors privately autosave text, offer draft recovery, protect against stale tabs and preserve form text on manual-save errors. New image uploads still require Update Post. See [autosave behavior and deployment](docs/editor-autosave.md).
-
-## Product interface
-
-Login, registration, password recovery, the dashboard, project pages and shared editor/SEO screens use the landing page’s light visual style. See [interface structure and deployment](docs/interface.md).
-
-### Claude project knowledge and writing tools
-
-The `ai-based` branch adds approved project profiles, optional website analysis, reviewed outline-to-draft generation, writing suggestions, and companion social content. AI is disabled by default and requires a configured Anthropic account and an `ai` queue worker. See [setup, permissions, quotas, and limitations](docs/ai-tools.md).
+See **[Django migration and deployment](docs/django-migration.md)** for database import, media, optional MySQL, Gunicorn/Nginx, provider settings, and current limitations. The previous README is preserved in [Laravel reference](docs/laravel-reference.md).

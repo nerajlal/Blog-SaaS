@@ -1,0 +1,784 @@
+import io
+import json
+import tempfile
+import uuid
+from datetime import timedelta
+from unittest.mock import patch, Mock
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
+from django.db import connection
+from django.test import TestCase, Client, override_settings
+from django.urls import reverse
+from django.utils import timezone
+from . import ai
+from .models import *
+from .services import *
+
+
+class PortalTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="owner@example.com",
+            email="owner@example.com",
+            password="GoodPassword492!",
+            first_name="Owner",
+        )
+        self.ws = Workspace.objects.create(
+            owner=self.owner, name="Studio", slug="studio"
+        )
+        Membership.objects.create(workspace=self.ws, user=self.owner, role="owner")
+        self.owner.current_workspace = self.ws
+        self.owner.save()
+        self.project = Project.objects.create(
+            user=self.owner,
+            workspace=self.ws,
+            name="Perfume shop",
+            description="Discovery fragrances",
+        )
+        self.category = Category.objects.create(
+            project=self.project, name="Guides", slug="guides"
+        )
+        self.blog = Blog.objects.create(
+            project=self.project,
+            user=self.owner,
+            category=self.category,
+            title="A fresh everyday scent",
+            status="draft",
+        )
+        BlogSection.objects.create(
+            blog=self.blog,
+            text_content="<h2>Try samples</h2><p>Find a scent you enjoy.</p>",
+        )
+        self.client.force_login(self.owner)
+
+    def profile(self):
+        profile = AiProfile.objects.create(
+            project=self.project,
+            data={
+                "name": "Perfume shop",
+                "summary": "A sample perfume shop",
+                "audience": "First-time fragrance buyers",
+                "facts": "Three 5 ml samples",
+            },
+            revision=1,
+        )
+        AiProfileVersion.objects.create(
+            project=self.project, approved_by=self.owner, revision=1, data=profile.data
+        )
+        AiSettings.objects.create(
+            scope=ai.scope(self.project), enabled=True, monthly_limit=5
+        )
+        return profile
+
+    def test_all_main_screens_render(self):
+        self.profile()
+        routes = [
+            ("projects", {}),
+            ("project", {"pk": self.project.pk}),
+            ("integration", {"pk": self.project.pk}),
+            ("create_blog", {"pk": self.project.pk}),
+            ("edit_blog", {"blog_id": self.blog.pk}),
+            ("profile", {"pk": self.project.pk}),
+            ("studio", {"pk": self.project.pk}),
+            ("seo_settings", {"pk": self.project.pk}),
+            ("health", {"pk": self.project.pk}),
+            ("report", {"blog_id": self.blog.pk}),
+            ("links", {"pk": self.project.pk}),
+            ("blog_links", {"blog_id": self.blog.pk}),
+            ("telemetry", {"pk": self.project.pk}),
+            ("batches", {"pk": self.project.pk, "kind": "metadata"}),
+            ("batches", {"pk": self.project.pk, "kind": "redirects"}),
+            ("search", {"pk": self.project.pk}),
+        ]
+        for name, kwargs in routes:
+            with self.subTest(route=name):
+                self.assertEqual(
+                    self.client.get(reverse(name, kwargs=kwargs)).status_code, 200
+                )
+
+    def test_landing_and_auth_pages(self):
+        self.client.logout()
+        for url in ["/", "/docs", "/login", "/register", "/forgot-password"]:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(
+            self.client.post(
+                "/login", {"username": self.owner.email, "password": "GoodPassword492!"}
+            ).status_code,
+            302,
+        )
+        self.assertEqual(self.client.get("/logout").status_code, 405)
+
+    def test_registration_creates_workspace_and_unique_email(self):
+        self.client.logout()
+        values = {
+            "first_name": "New author",
+            "email": "new@example.com",
+            "password1": "GoodPassword482!",
+            "password2": "GoodPassword482!",
+            "company_name": "Scent Studio",
+        }
+        self.assertEqual(self.client.post("/register", values).status_code, 302)
+        user = User.objects.get(email="new@example.com")
+        self.assertTrue(Membership.objects.filter(user=user, role="owner").exists())
+        self.assertIsNotNone(user.current_workspace_id)
+        self.client.logout()
+        self.assertEqual(self.client.post("/register", values).status_code, 200)
+        self.assertEqual(User.objects.filter(email="new@example.com").count(), 1)
+
+    def test_csrf_and_post_only_deletion(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.owner)
+        self.assertEqual(
+            client.post(
+                reverse("project_delete", args=[self.project.pk]),
+                {"project_name": self.project.name},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.get(
+                reverse("project_delete", args=[self.project.pk])
+            ).status_code,
+            405,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("project_delete", args=[self.project.pk]),
+                {"project_name": "wrong"},
+            ).status_code,
+            400,
+        )
+        self.assertTrue(Project.objects.filter(pk=self.project.pk).exists())
+
+    def test_role_and_cross_workspace_isolation(self):
+        editor = User.objects.create_user(username="editor", email="editor@example.com")
+        Membership.objects.create(user=editor, workspace=self.ws, role="editor")
+        self.client.force_login(editor)
+        self.assertEqual(
+            self.client.get(reverse("edit_blog", args=[self.blog.pk])).status_code, 200
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("profile_action", args=[self.project.pk, "settings"]),
+                {"enabled": "1", "monthly_limit": 5},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("project_delete", args=[self.project.pk]),
+                {"project_name": self.project.name},
+            ).status_code,
+            403,
+        )
+        outsider = User.objects.create_user(
+            username="outsider", email="out@example.com"
+        )
+        self.client.force_login(outsider)
+        for name in ["project", "profile", "studio", "integration"]:
+            self.assertEqual(
+                self.client.get(reverse(name, args=[self.project.pk])).status_code, 403
+            )
+
+    def test_blogs_screen_excludes_integration(self):
+        result = self.client.get(reverse("project", args=[self.project.pk]))
+        self.assertContains(result, "Your stories")
+        self.assertNotContains(result, "Project API key")
+        result = self.client.get(reverse("integration", args=[self.project.pk]))
+        self.assertContains(result, "Project API key")
+        self.assertNotContains(result, "Your stories")
+
+    def test_create_edit_and_optimistic_conflict(self):
+        values = {
+            "title": "A perfume guide",
+            "category": self.category.pk,
+            "status": "draft",
+            "robots_index": "inherit",
+            "sections-TOTAL_FORMS": 1,
+            "sections-INITIAL_FORMS": 0,
+            "sections-MIN_NUM_FORMS": 1,
+            "sections-MAX_NUM_FORMS": 100,
+            "sections-0-text_content": "<p>Useful draft</p><script>alert(1)</script>",
+            "sections-0-order": 0,
+        }
+        response = self.client.post(
+            reverse("create_blog", args=[self.project.pk]), values
+        )
+        self.assertEqual(response.status_code, 302)
+        blog = Blog.objects.get(title="A perfume guide")
+        self.assertNotIn("script", blog.sections.first().text_content)
+        values.update(
+            {
+                "editor_revision": "old",
+                "sections-INITIAL_FORMS": 1,
+                "sections-0-id": blog.sections.first().pk,
+                "sections-0-blog": blog.pk,
+            }
+        )
+        response = self.client.post(reverse("edit_blog", args=[blog.pk]), values)
+        self.assertEqual(response.status_code, 409)
+        blog.refresh_from_db()
+        self.assertEqual(blog.title, "A perfume guide")
+
+    def test_private_autosave_versions_and_tombstones(self):
+        url = reverse("autosave", args=[self.blog.pk])
+        base = revision(self.blog)
+        data = {
+            "version": 0,
+            "base_hash": base,
+            "snapshot": {
+                "title": "Private draft",
+                "sections": [{"text_content": "<p>Draft</p><script>x</script>"}],
+            },
+        }
+        self.assertEqual(
+            self.client.post(
+                url, json.dumps(data), content_type="application/json"
+            ).status_code,
+            200,
+        )
+        self.assertEqual(
+            self.client.post(
+                url, json.dumps(data), content_type="application/json"
+            ).status_code,
+            409,
+        )
+        self.blog.refresh_from_db()
+        self.assertNotEqual(self.blog.title, "Private draft")
+        self.assertEqual(
+            self.client.get(url).json()["snapshot"]["title"], "Private draft"
+        )
+        data.update({"version": 1, "discard": True})
+        self.assertEqual(
+            self.client.post(
+                url, json.dumps(data), content_type="application/json"
+            ).json()["version"],
+            2,
+        )
+        self.assertEqual(self.client.get(url).json()["snapshot"], {})
+
+    def test_api_published_only_pagination_and_contract(self):
+        Blog.objects.create(
+            project=self.project,
+            user=self.owner,
+            title="Scheduled",
+            status="published",
+            published_at=timezone.now() + timedelta(days=2),
+        )
+        self.blog.status = "published"
+        self.blog.save()
+        response = self.client.get(
+            "/api/v1/projects/blogs", HTTP_X_API_KEY=self.project.api_key
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["meta"]["total"], 1)
+        for key in [
+            "version",
+            "robots",
+            "open_graph",
+            "twitter",
+            "schema",
+            "warnings",
+            "public_url",
+        ]:
+            self.assertIn(key, payload["blogs"][0]["seo"])
+        self.assertNotIn("seo_settings", payload["blogs"][0])
+        self.assertEqual(
+            payload["blogs"][0]["seo"]["robots"], {"index": True, "follow": True}
+        )
+        self.assertEqual(self.client.get("/api/v1/projects/blogs").status_code, 401)
+        self.assertEqual(
+            self.client.get(
+                "/api/v1/projects/blogs?per_page=101",
+                HTTP_X_API_KEY=self.project.api_key,
+            ).status_code,
+            400,
+        )
+
+    def test_sitemap_and_canonical_require_verified_domain(self):
+        url = "/api/v1/projects/sitemap.xml"
+        self.assertEqual(
+            self.client.get(url, HTTP_X_API_KEY=self.project.api_key).status_code, 409
+        )
+        self.project.seo_settings = {
+            "public_url": "https://example.com",
+            "article_path": "/news/{slug}",
+        }
+        self.project.seo_verified_at = timezone.now()
+        self.project.save()
+        self.blog.status = "published"
+        self.blog.save()
+        response = self.client.get(url, HTTP_X_API_KEY=self.project.api_key)
+        self.assertContains(response, "/news/" + self.blog.slug)
+        self.blog.seo_settings = {"robots_index": "noindex"}
+        self.blog.save()
+        self.assertNotContains(
+            self.client.get(url, HTTP_X_API_KEY=self.project.api_key),
+            "/news/" + self.blog.slug,
+        )
+
+    def test_csv_review_apply_and_guarded_undo(self):
+        before = self.blog.seo_settings.copy()
+        raw = (
+            "blog_id,"
+            + ",".join(META_FIELDS)
+            + "\n"
+            + str(self.blog.pk)
+            + ",New title,New description,perfume,index,follow\n"
+        )
+        batch = preview_csv(
+            self.project,
+            self.owner,
+            "metadata",
+            SimpleUploadedFile("meta.csv", raw.encode()),
+            "Improve metadata",
+        )
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.seo_settings, before)
+        commit_batch(batch)
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.seo_settings["title"], "New title")
+        self.blog.seo_settings = {"title": "Newer work"}
+        self.blog.save()
+        with self.assertRaises(ValidationError):
+            commit_batch(batch, True)
+
+    def test_redirect_cycles_and_lookup_contract(self):
+        with self.assertRaises(ValidationError):
+            validate_redirects(
+                [
+                    {"source_path": "/a", "target_path": "/b"},
+                    {"source_path": "/b", "target_path": "/a"},
+                ]
+            )
+        self.project.seo_settings = {"public_url": "https://example.com"}
+        self.project.seo_verified_at = timezone.now()
+        self.project.save()
+        RedirectRule.objects.create(
+            project=self.project,
+            source_path="/old",
+            target_path="/new",
+            status_code=301,
+        )
+        response = self.client.get(
+            "/api/v1/projects/redirect?path=/old", HTTP_X_API_KEY=self.project.api_key
+        )
+        self.assertEqual(
+            response.json()["redirect"], {"status": 301, "location": "/new"}
+        )
+
+    def test_telemetry_secret_origin_and_event_dedup(self):
+        secret = token()
+        self.project.telemetry_key_hash = digest(secret)
+        self.project.seo_settings = {"public_url": "https://example.com"}
+        self.project.seo_verified_at = timezone.now()
+        self.project.save()
+        data = {
+            "origin": "https://example.com",
+            "path": "/missing?private=value",
+            "event_id": str(uuid.uuid4()),
+        }
+        url = "/api/v1/projects/not-found"
+        self.assertEqual(
+            self.client.post(
+                url, json.dumps(data), content_type="application/json"
+            ).status_code,
+            401,
+        )
+        for _ in range(2):
+            self.assertEqual(
+                self.client.post(
+                    url,
+                    json.dumps(data),
+                    content_type="application/json",
+                    HTTP_X_TELEMETRY_KEY=secret,
+                ).status_code,
+                204,
+            )
+        event = NotFoundEvent.objects.get()
+        self.assertEqual(event.path, "/missing")
+        self.assertEqual(event.hits, 1)
+
+    def test_profiles_approval_and_encryption(self):
+        profile = self.profile()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT data FROM portal_aiprofile WHERE id=%s", [profile.pk]
+            )
+            raw = cursor.fetchone()[0]
+        self.assertNotIn("perfume", raw)
+        values = {**profile.data, "revision": 1, "summary": "New business facts"}
+        self.assertEqual(
+            self.client.post(
+                reverse("profile", args=[self.project.pk]), values
+            ).status_code,
+            302,
+        )
+        self.assertEqual(
+            ai.approved(self.project).data["summary"], "A sample perfume shop"
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("profile", args=[self.project.pk]), values
+            ).status_code,
+            409,
+        )
+
+    @override_settings(
+        AI_ENABLED=True,
+        ANTHROPIC_API_KEY="test-key",
+        CLAUDE_MODEL="test-model",
+        AI_MONTHLY_REQUEST_LIMIT=5,
+    )
+    def test_ai_queue_idempotency_usage_and_worker(self):
+        self.profile()
+        key = uuid.uuid4()
+        data = {"brief": "Choose a scent"}
+        run = ai.enqueue(self.project, self.owner, "outline", data.copy(), key)
+        again = ai.enqueue(self.project, self.owner, "outline", data.copy(), key)
+        self.assertEqual(run.pk, again.pk)
+        self.assertEqual(AiUsage.objects.get().requests, 1)
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.headers = {"request-id": "test-request"}
+        response.json.return_value = {
+            "stop_reason": "end_turn",
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(
+                        {
+                            "title": "Fresh scent",
+                            "outline": "Explore samples first",
+                            "warnings": "",
+                        }
+                    ),
+                }
+            ],
+            "usage": {"input_tokens": 100, "output_tokens": 50},
+        }
+        with patch("portal.ai.requests.post", return_value=response):
+            call_command("work", "--once", stdout=io.StringIO())
+        run.refresh_from_db()
+        self.assertEqual(run.state, "complete")
+        self.assertEqual(run.usage["input_tokens"], 100)
+        self.assertEqual(
+            self.client.get(
+                reverse("ai_run", args=[self.project.pk, run.pk])
+            ).status_code,
+            200,
+        )
+
+    @override_settings(
+        AI_ENABLED=True, ANTHROPIC_API_KEY="test-key", CLAUDE_MODEL="test-model"
+    )
+    def test_ai_stale_review_and_private_draft_creation(self):
+        self.profile()
+        version = ai.approved(self.project)
+        run = AiRun.objects.create(
+            project=self.project,
+            user=self.owner,
+            profile_version=version,
+            action="draft",
+            request_key=uuid.uuid4(),
+            fingerprint="f",
+            state="complete",
+            result={
+                "title": "A perfume draft",
+                "excerpt": "Useful perfume tips",
+                "body_html": "<p>Try samples.</p>",
+                "seo_description": "Fragrance discovery",
+                "warnings": "",
+            },
+        )
+        response = self.client.post(
+            reverse("ai_run", args=[self.project.pk, run.pk]),
+            {**run.result, "revision": 1, "reviewed": "on"},
+        )
+        self.assertEqual(response.status_code, 302)
+        for _ in range(2):
+            self.assertEqual(
+                self.client.post(
+                    reverse("ai_run_action", args=[self.project.pk, run.pk, "draft"]),
+                    {"category_id": self.category.pk},
+                ).status_code,
+                302,
+            )
+        created = Blog.objects.get(title="A perfume draft")
+        self.assertEqual(created.status, "draft")
+        self.assertEqual(Blog.objects.filter(title="A perfume draft").count(), 1)
+        AiProfileVersion.objects.create(
+            project=self.project, approved_by=self.owner, revision=2, data=version.data
+        )
+        self.assertTrue(ai.stale(run))
+        self.assertContains(
+            self.client.get(reverse("ai_run", args=[self.project.pk, run.pk])),
+            "Source article or approved profile changed",
+        )
+
+    def test_public_url_and_sanitizer(self):
+        for url in [
+            "http://127.0.0.1",
+            "http://localhost",
+            "http://169.254.169.254",
+            "file:///etc/passwd",
+            "https://example.com:8080",
+            "https://user:pass@example.com",
+        ]:
+            with (
+                self.subTest(url=url),
+                self.assertRaises((ValidationError, ValueError)),
+            ):
+                public_url(url)
+        result = clean_html(
+            '<script>evil()</script><p onclick="evil()">Safe <a href="javascript:evil()">link</a></p>'
+        )
+        self.assertNotIn("script", result)
+        self.assertNotIn("onclick", result)
+        self.assertNotIn("javascript", result)
+        with (
+            patch("portal.services.dns.resolver.resolve", return_value=["127.0.0.1"]),
+            self.assertRaises(ValidationError),
+        ):
+            fetch_public("https://example.com")
+
+    def test_legacy_import_dry_run_and_password_compatibility(self):
+        from django.contrib.auth.hashers import check_password
+        import bcrypt
+
+        hashed = (
+            bcrypt.hashpw(b"OldPassword492!", bcrypt.gensalt())
+            .decode()
+            .replace("$2b$", "$2y$")
+        )
+        self.assertTrue(check_password("OldPassword492!", "bcrypt$" + hashed))
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as out:
+            json.dump(
+                {"format": "blogsaas-laravel-export-v1", "tables": {"users": []}}, out
+            )
+            out.flush()
+            call_command("import_laravel", out.name, stdout=io.StringIO())
+        self.assertEqual(User.objects.count(), 1)
+
+    def test_cors_is_limited_to_verified_project_origin(self):
+        self.project.seo_settings = {"public_url": "https://example.com"}
+        self.project.seo_verified_at = timezone.now()
+        self.project.save()
+        result = self.client.options(
+            "/api/v1/projects/blogs", HTTP_ORIGIN="https://example.com"
+        )
+        self.assertEqual(result.status_code, 204)
+        self.assertEqual(result["Access-Control-Allow-Origin"], "https://example.com")
+        self.assertEqual(
+            self.client.options(
+                "/api/v1/projects/blogs", HTTP_ORIGIN="https://evil.example"
+            ).status_code,
+            403,
+        )
+        result = self.client.get(
+            "/api/v1/projects/blogs",
+            HTTP_X_API_KEY=self.project.api_key,
+            HTTP_ORIGIN="https://example.com",
+        )
+        self.assertEqual(result["Access-Control-Allow-Origin"], "https://example.com")
+
+    def test_batch_expiry_prevents_apply(self):
+        batch = ChangeBatch.objects.create(
+            project=self.project,
+            user=self.owner,
+            kind="metadata",
+            reason="Expired preview",
+            changes=[],
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+        with self.assertRaises(ValidationError):
+            commit_batch(batch)
+
+    def test_image_normalization_and_rejection(self):
+        from PIL import Image
+
+        image = io.BytesIO()
+        Image.new("RGB", (20, 20), "red").save(image, format="PNG")
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            override_settings(MEDIA_ROOT=directory),
+        ):
+            path = save_image(
+                SimpleUploadedFile(
+                    "picture.php", image.getvalue(), content_type="image/png"
+                )
+            )
+            self.assertTrue(path.endswith(".jpg"))
+            self.assertTrue(
+                default_storage.exists(path.removeprefix(settings.MEDIA_URL))
+            )
+            with self.assertRaises(ValidationError):
+                save_image(
+                    SimpleUploadedFile("bad.svg", b"<svg><script>x</script></svg>")
+                )
+
+    def test_oauth_callback_rejects_missing_and_wrong_state(self):
+        self.assertEqual(
+            self.client.get("/admin/search-console/callback?state=bad").status_code, 400
+        )
+        session = self.client.session
+        session["google_oauth"] = {
+            "state": "correct",
+            "project": self.project.pk,
+            "verifier": "test",
+            "time": timezone.now().timestamp(),
+        }
+        session.save()
+        self.assertEqual(
+            self.client.get(
+                "/admin/search-console/callback?state=incorrect"
+            ).status_code,
+            400,
+        )
+
+    @override_settings(
+        AI_ENABLED=True, ANTHROPIC_API_KEY="test-key", CLAUDE_MODEL="test-model"
+    )
+    def test_cancelled_run_does_not_block_next_request_or_call_provider(self):
+        self.profile()
+        run = ai.enqueue(
+            self.project, self.owner, "outline", {"brief": "First"}, uuid.uuid4()
+        )
+        self.client.post(
+            reverse("ai_run_action", args=[self.project.pk, run.pk, "cancel"])
+        )
+        new = ai.enqueue(
+            self.project, self.owner, "outline", {"brief": "Second"}, uuid.uuid4()
+        )
+        self.assertNotEqual(new.pk, run.pk)
+        with patch("portal.ai.requests.post") as provider:
+            call_command("work", "--once", stdout=io.StringIO())
+            provider.assert_not_called()
+
+    @override_settings(
+        AI_ENABLED=True, ANTHROPIC_API_KEY="test-key", CLAUDE_MODEL="test-model"
+    )
+    def test_truncated_provider_output_fails_without_publishing(self):
+        self.profile()
+        run = ai.enqueue(
+            self.project, self.owner, "outline", {"brief": "First"}, uuid.uuid4()
+        )
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {"stop_reason": "max_tokens", "content": []}
+        with patch("portal.ai.requests.post", return_value=response):
+            call_command("work", "--once", stdout=io.StringIO())
+        run.refresh_from_db()
+        self.assertEqual(run.state, "failed")
+        self.assertEqual(Blog.objects.live().count(), 0)
+
+
+class ImportTests(TestCase):
+    def test_apply_core_export_preserves_ids_and_relations(self):
+        payload = {
+            "format": "blogsaas-laravel-export-v1",
+            "tables": {
+                "users": [
+                    {
+                        "id": 12,
+                        "email": "legacy@example.com",
+                        "name": "Legacy Writer",
+                        "password": "unsupported",
+                        "current_workspace_id": 20,
+                    }
+                ],
+                "workspaces": [
+                    {
+                        "id": 20,
+                        "owner_id": 12,
+                        "name": "Legacy studio",
+                        "slug": "legacy-studio",
+                    }
+                ],
+                "workspace_user": [
+                    {"workspace_id": 20, "user_id": 12, "role": "owner"}
+                ],
+                "projects": [
+                    {
+                        "id": 30,
+                        "user_id": 12,
+                        "workspace_id": 20,
+                        "name": "Legacy publication",
+                        "api_key": "pk_legacy",
+                        "subdomain": None,
+                        "seo_settings": "{}",
+                    }
+                ],
+                "categories": [
+                    {"id": 40, "project_id": 30, "name": "Guides", "slug": "guides"}
+                ],
+                "blogs": [
+                    {
+                        "id": 50,
+                        "project_id": 30,
+                        "user_id": 12,
+                        "category_id": 40,
+                        "title": "Legacy story",
+                        "slug": "legacy-story",
+                        "content": "<p>Legacy text</p>",
+                        "status": "draft",
+                        "seo_settings": "{}",
+                    }
+                ],
+                "blog_sections": [
+                    {
+                        "id": 60,
+                        "blog_id": 50,
+                        "text_content": "<p>Original section</p>",
+                        "order": 0,
+                    }
+                ],
+                "ai_profiles": [
+                    {
+                        "id": 70,
+                        "project_id": 30,
+                        "revision": 1,
+                        "data": {
+                            "name": "Legacy publication",
+                            "summary": "Old facts",
+                            "audience": "Readers",
+                        },
+                    }
+                ],
+            },
+        }
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as out:
+            json.dump(payload, out)
+            out.flush()
+            call_command("import_laravel", out.name, "--apply", stdout=io.StringIO())
+        self.assertEqual(Blog.objects.get(pk=50).category_id, 40)
+        self.assertEqual(User.objects.get(pk=12).current_workspace_id, 20)
+        self.assertEqual(AiProfile.objects.get(pk=70).data["summary"], "Old facts")
+        created = Blog.objects.create(project_id=30, user_id=12, title="Next story")
+        self.assertGreater(created.pk, 50)
+
+
+class CrawlerTests(TestCase):
+    def test_wildcard_and_longest_robots_rules(self):
+        policy = RobotsPolicy()
+        policy.parse(
+            [
+                "User-agent: *",
+                "Disallow: /private",
+                "Allow: /private/public",
+                "Disallow: /*?secret=*",
+            ]
+        )
+        self.assertFalse(
+            policy.can_fetch("BlogSaaS-AI", "https://example.com/private/account")
+        )
+        self.assertTrue(
+            policy.can_fetch("BlogSaaS-AI", "https://example.com/private/public")
+        )
+        self.assertFalse(
+            policy.can_fetch("BlogSaaS-AI", "https://example.com/page?secret=value")
+        )
