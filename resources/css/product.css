@@ -2420,3 +2420,8 @@
 
 .ai-card-state { font-size: 10px; color: #7b8f9a; }
 .ai-profile-extra { display: grid; gap: 10px; margin-top: 14px; }
+
+.ai-profile-reminder { position: fixed; }
+.ai-profile-reminder h2 { margin-top: 18px; padding-right: 20px; overflow-wrap: anywhere; }
+.ai-profile-reminder p { color: #637582; font-size: 14px; line-height: 1.7; }
+.ai-reminder-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: #f2f6fa; color: #637582; font-size: 22px; cursor: pointer; }

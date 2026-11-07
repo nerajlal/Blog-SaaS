@@ -50,3 +50,23 @@ if (task) {
     };
     setTimeout(poll, 4000);
 }
+
+// Optional onboarding: preserve ordinary links and let writers continue on close/Escape.
+document.querySelectorAll('[data-ai-profile-reminder]').forEach(link => {
+    const dialog = document.getElementById(link.dataset.aiProfileReminder);
+    if (!dialog || typeof dialog.showModal !== 'function') return;
+    link.addEventListener('click', event => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        dialog.dataset.continueUrl = link.href;
+        dialog.showModal();
+    });
+});
+document.querySelectorAll('.ai-profile-reminder').forEach(dialog => {
+    dialog.querySelectorAll('[data-profile-continue]').forEach(button => {
+        button.addEventListener('click', () => dialog.close());
+    });
+    dialog.addEventListener('close', () => {
+        if (dialog.dataset.continueUrl) window.location.assign(dialog.dataset.continueUrl);
+    });
+});

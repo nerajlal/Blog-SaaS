@@ -13,7 +13,7 @@
             <div class="project-card-link">
                 <div class="project-card-top"><span class="project-card-icon palette-{{ $loop->index % 3 }}">{{ mb_substr($project->name,0,1) }}</span><span><i class="stat-dot" aria-hidden="true"></i> Your publication</span></div>
                 <div class="project-title-row">
-                    <h4><a href="{{ route('admin.project-details', $project) }}">{{ $project->name }}</a></h4>
+                    <h4><a href="{{ route('admin.project-details', $project) }}" @if(!$project->ai_profile_revision) data-ai-profile-reminder="profile-reminder-{{ $project->id }}" @endif>{{ $project->name }}</a></h4>
                     @can('delete', $project)
                     <button type="button" class="project-trash-button" data-open-dialog="delete-dialog-{{ $project->id }}" aria-label="Delete project: {{ $project->name }}" title="Delete project">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>
@@ -24,10 +24,23 @@
                 <div class="project-card-bottom"><span><strong>{{ $project->blogs_count }}</strong> {{ \Illuminate\Support\Str::plural('story',$project->blogs_count) }} <span aria-hidden="true">·</span> Updated {{ $project->updated_at->diffForHumans() }}</span></div>
                 <a href="{{ route('admin.ai.profile', $project) }}" class="project-details-link">Project details <span class="ai-card-state">{{ !$project->ai_profile_revision ? 'Not configured' : ($project->ai_approved_revision == $project->ai_profile_revision ? 'Ready for AI' : 'Needs review') }} ↗</span></a>
                 <div class="project-card-actions">
-                    <a href="{{ route('admin.project-details', $project) }}" class="project-action project-action-primary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg>Blogs</a>
+                    <a href="{{ route('admin.project-details', $project) }}" class="project-action project-action-primary" @if(!$project->ai_profile_revision) data-ai-profile-reminder="profile-reminder-{{ $project->id }}" @endif><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg>Blogs</a>
                     <a href="{{ route('admin.projects.integration', $project) }}" class="project-action project-action-secondary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 8-4 4 4 4m8-8 4 4-4 4m-3-11-2 14"/></svg>Integration</a>
                 </div>
             </div>
+            @if(!$project->ai_profile_revision)
+            <dialog id="profile-reminder-{{ $project->id }}" class="project-delete-dialog ai-profile-reminder" aria-labelledby="profile-reminder-title-{{ $project->id }}" aria-describedby="profile-reminder-description-{{ $project->id }}">
+                <button type="button" class="ai-reminder-close" data-profile-continue aria-label="Close and continue to blogs">×</button>
+                <span class="ai-badge">A little context, better suggestions</span>
+                <h2 id="profile-reminder-title-{{ $project->id }}">Tell us about {{ $project->name }}</h2>
+                <p id="profile-reminder-description-{{ $project->id }}">Fill in your project details to get AI suggestions tailored to your business, products, and audience. You can keep writing and set this up later.</p>
+                @cannot('manageSeo', $project)<p class="ai-muted">An owner or admin can fill in and approve these details.</p>@endcannot
+                <div class="project-delete-actions">
+                    <button type="button" class="product-button product-button-light" data-profile-continue autofocus>Continue to blogs</button>
+                    <a href="{{ route('admin.ai.profile', $project) }}" class="product-button product-button-dark">{{ auth()->user()->can('manageSeo', $project) ? 'Set up project details' : 'View project details' }}</a>
+                </div>
+            </dialog>
+            @endif
             @can('delete', $project)
             <dialog id="delete-dialog-{{ $project->id }}" class="project-delete-dialog" aria-labelledby="delete-title-{{ $project->id }}">
                 <h2 id="delete-title-{{ $project->id }}">Delete project?</h2>

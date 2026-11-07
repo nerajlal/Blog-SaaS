@@ -13,6 +13,8 @@ Implemented on branch `ai-based`. This is an optional, disabled-by-default featu
 
 Nothing auto-publishes, posts externally, creates media, connects a social account, or crawls an entire site. A model cannot independently remember project context: the application supplies the approved snapshot each time.
 
+On the Projects screen, opening a project title or Blogs action without saved project details shows an optional setup reminder. Continue, Close, or Escape opens Blogs; Set up project details opens the profile page. Configured projects and Integration links open directly. Members without profile-edit permissions are directed to view details and ask an owner/admin.
+
 ## Setup
 
 First run the new migration and build assets on the target checkout:
