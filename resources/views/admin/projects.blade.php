@@ -10,24 +10,31 @@
     <div class="project-grid">
         @foreach($projects as $project)
         <article class="project-card">
-            <a href="{{ route('admin.project-details',$project) }}" class="project-card-link">
+            <div class="project-card-link">
                 <div class="project-card-top"><span class="project-card-icon palette-{{ $loop->index % 3 }}">{{ mb_substr($project->name,0,1) }}</span><span><i class="stat-dot" aria-hidden="true"></i> Your publication</span></div>
-                <h4>{{ $project->name }}</h4>
+                <div class="project-title-row">
+                    <h4><a href="{{ route('admin.project-details', $project) }}">{{ $project->name }}</a></h4>
+                    @can('delete', $project)
+                    <button type="button" class="project-trash-button" data-open-dialog="delete-dialog-{{ $project->id }}" aria-label="Delete project: {{ $project->name }}" title="Delete project">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>
+                    </button>
+                    @endcan
+                </div>
                 <p class="project-card-description">{{ $project->description ?: 'A little space for stories, fresh perspectives, and what comes next.' }}</p>
-                <div class="project-card-bottom"><span><strong>{{ $project->blogs_count }}</strong> {{ \Illuminate\Support\Str::plural('story',$project->blogs_count) }} <span aria-hidden="true">·</span> Updated {{ $project->updated_at->diffForHumans() }}</span><span aria-hidden="true">↗</span></div>
-            </a>
+                <div class="project-card-bottom"><span><strong>{{ $project->blogs_count }}</strong> {{ \Illuminate\Support\Str::plural('story',$project->blogs_count) }} <span aria-hidden="true">·</span> Updated {{ $project->updated_at->diffForHumans() }}</span><a href="{{ route('admin.project-details', $project) }}" aria-label="Open {{ $project->name }}">↗</a></div>
+            </div>
             @can('delete', $project)
-            <details class="project-delete">
-                <summary>Delete project</summary>
+            <dialog id="delete-dialog-{{ $project->id }}" class="project-delete-dialog" aria-labelledby="delete-title-{{ $project->id }}">
+                <h2 id="delete-title-{{ $project->id }}">Delete project?</h2>
                 <form action="{{ route('admin.projects.destroy', $project) }}" method="POST">
                     @csrf
                     @method('DELETE')
                     <p>Permanently delete <strong>{{ $project->name }}</strong>, its {{ $project->blogs_count }} stories, drafts, categories, and SEO data. This cannot be undone.</p>
                     <label for="delete-project-{{ $project->id }}">Type {{ $project->name }} to confirm</label>
                     <input id="delete-project-{{ $project->id }}" name="project_name" required autocomplete="off" spellcheck="false">
-                    <button type="submit" class="product-button project-delete-button">Permanently delete project</button>
+                    <div class="project-delete-actions"><button type="button" class="product-button" data-close-dialog autofocus>Cancel</button><button type="submit" class="product-button project-delete-button">Delete project</button></div>
                 </form>
-            </details>
+            </dialog>
             @endcan
         </article>
         @endforeach

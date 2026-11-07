@@ -44,3 +44,17 @@ document.addEventListener('click', event => {
 document.addEventListener('keydown', event => {
     if (event.key === 'Escape') document.querySelectorAll('.account-menu[open]').forEach(menu => { menu.open = false; menu.querySelector('summary').focus(); });
 });
+
+// Native dialogs handle modal focus and Escape; restore focus to the trigger on close.
+document.querySelectorAll('[data-open-dialog]').forEach(button => {
+    const dialog = document.getElementById(button.dataset.openDialog);
+    if (!dialog) return;
+    button.addEventListener('click', () => dialog.showModal());
+    dialog.querySelectorAll('[data-close-dialog]').forEach(cancel => {
+        cancel.addEventListener('click', () => dialog.close());
+    });
+    dialog.addEventListener('close', () => {
+        dialog.querySelector('form')?.reset();
+        button.focus();
+    });
+});

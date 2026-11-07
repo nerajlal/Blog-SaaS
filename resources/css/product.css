@@ -2354,10 +2354,17 @@
 }
 
 .project-card-link { display: flex; flex-direction: column; flex: 1; color: inherit; text-decoration: none; }
-.project-delete { margin-top: 14px; border-top: 1px solid #e3ebef; padding-top: 12px; }
-.project-delete summary { color: #a32938; font-size: 12px; cursor: pointer; width: fit-content; }
-.project-delete form { margin-top: 12px; }
-.project-delete p, .project-delete label { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-.project-delete label { display: block; margin: 12px 0 6px; }
-.project-delete input { width: 100%; min-width: 0; }
-.project-delete-button { margin-top: 12px; background: #a32938; color: white; width: 100%; font-size: 12px; }
+
+.project-title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.project-title-row h4 { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.project-title-row a { color: inherit; text-decoration: none; }
+.project-trash-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 36px; height: 36px; border: 0; border-radius: 10px; background: #fff1f2; color: #b42338; cursor: pointer; }
+.project-trash-button:hover { background: #ffe0e5; }
+.project-delete-dialog { margin: auto; width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; border: 1px solid #e3ebef; border-radius: 20px; padding: 28px; background: white; color: #18282e; box-shadow: 0 24px 80px #18282e33; }
+.project-delete-dialog::backdrop { background: #18282e88; }
+.project-delete-dialog h2 { font-size: 23px; margin: 0 0 16px; }
+.project-delete-dialog p, .project-delete-dialog label { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.project-delete-dialog label { display: block; margin: 18px 0 8px; }
+.project-delete-dialog input { width: 100%; min-width: 0; }
+.project-delete-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.project-delete-button { background: #a32938; color: white; }
