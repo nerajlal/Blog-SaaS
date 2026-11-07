@@ -92,6 +92,27 @@ class ProjectController extends Controller
         });
     }
 
+    public function destroy(Request $request, Project $project)
+    {
+        Gate::authorize('delete', $project);
+        $request->validate(['project_name' => ['required', 'string', function ($attribute, $value, $fail) use ($project) {
+            if ($value !== $project->name) {
+                $fail('Type the exact project name to confirm deletion.');
+            }
+        }]]);
+
+        DB::transaction(function () use ($project) {
+            $media = [];
+            foreach ($project->blogs()->with('sections')->get() as $blog) {
+                $media = array_merge($media, [$blog->cover_image, $blog->author_avatar], $blog->sections->pluck('image_path')->all());
+            }
+            $project->delete();
+            \App\Support\BlogMedia::removeAfterCommit($media);
+        });
+
+        return redirect()->route('admin.projects')->with('success', 'Project and its stories deleted.');
+    }
+
     public function show(Project $project)
     {
         $workspace = $this->getCurrentWorkspace();

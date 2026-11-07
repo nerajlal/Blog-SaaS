@@ -34,6 +34,11 @@ class ProjectPolicy
         return $user->workspaces()->whereKey($project->workspace_id)->wherePivotIn('role', ['owner', 'admin'])->exists();
     }
 
+    public function delete(User $user, Project $project): bool
+    {
+        return $this->manageSeo($user, $project);
+    }
+
     public function createInWorkspace(User $user, Workspace $workspace): bool
     {
         return $this->canWrite($user, $workspace->id);
