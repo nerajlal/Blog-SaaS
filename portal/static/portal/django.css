@@ -7,3 +7,5 @@
 .social-version.linkedin{background:#edf5ff;color:#28608b;border-color:#dce9f8}.social-version.reddit{background:#fff5ef;color:#a65330;border-color:#f3e3d8}.social-version.facebook{background:#eff3ff;color:#465fa3;border-color:#dfe5f7}.social-version.instagram{background:#fcf1f8;color:#99547e;border-color:#efdfeb}
 .social-version:hover,.social-version.selected{background:#e6efff;border-color:#a9bee6;color:#3458aa}
 .social-platform-picker{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 12px}.social-platform-picker .social-version{padding:9px 15px;font-size:12px}.social-version-help{font-size:12px;margin-bottom:23px}
+
+.story-social-actions form{margin:0}.social-source-note{display:block;max-width:480px;margin-top:8px;color:#71818b;font-size:10px;line-height:1.5}

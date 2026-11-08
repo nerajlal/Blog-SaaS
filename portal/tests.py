@@ -924,6 +924,77 @@ class SocialShortcutTests(TestCase):
             response, f"blog={self.blog.pk}&amp;platform=linkedin&amp;page=2"
         )
 
+    @override_settings(
+        AI_ENABLED=True, ANTHROPIC_API_KEY="test-key", CLAUDE_MODEL="test-model"
+    )
+    def test_direct_version_uses_existing_article_and_reopens_saved_content(self):
+        self.profile()
+        url = reverse(
+            "social_version", args=[self.project.pk, self.blog.pk, "linkedin"]
+        )
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(AiRun.objects.count(), 0)
+        response = self.client.post(url, {"request_key": uuid.uuid4()})
+        run = AiRun.objects.get()
+        self.assertRedirects(
+            response, reverse("ai_run", args=[self.project.pk, run.pk])
+        )
+        self.assertEqual(run.action, "social")
+        self.assertEqual(run.blog_id, self.blog.pk)
+        self.assertIn("Find a scent you enjoy", run.input["article"]["body"])
+        self.assertEqual(run.input["article"]["title"], self.blog.title)
+        self.assertEqual(Blog.objects.count(), 1)
+        run.state = "complete"
+        run.result = {
+            "title": "Saved version",
+            "body": "Existing LinkedIn text",
+            "hashtags": "",
+            "carousel": "",
+            "warnings": "",
+        }
+        run.edited = {**run.result, "body": "My manually edited LinkedIn text"}
+        run.save()
+        with override_settings(AI_ENABLED=False):
+            response = self.client.post(url, {"request_key": uuid.uuid4()})
+            self.assertRedirects(
+                response, reverse("ai_run", args=[self.project.pk, run.pk])
+            )
+        self.assertEqual(AiRun.objects.count(), 1)
+        self.assertEqual(WorkItem.objects.count(), 1)
+        self.assertEqual(AiUsage.objects.get().requests, 1)
+        run.refresh_from_db()
+        self.assertEqual(run.edited["body"], "My manually edited LinkedIn text")
+
+    def test_version_creation_checks_project_and_write_permissions(self):
+        outsider_project = Project.objects.create(
+            user=self.owner, name="Different project"
+        )
+        foreign = Blog.objects.create(
+            project=outsider_project, user=self.owner, title="Different article"
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("social_version", args=[self.project.pk, foreign.pk, "reddit"]),
+                {"request_key": uuid.uuid4()},
+            ).status_code,
+            404,
+        )
+        viewer = User.objects.create_user(
+            username="reader-social", email="reader-social@example.com"
+        )
+        Membership.objects.create(user=viewer, workspace=self.ws, role="viewer")
+        self.client.force_login(viewer)
+        self.assertEqual(
+            self.client.post(
+                reverse(
+                    "social_version", args=[self.project.pk, self.blog.pk, "reddit"]
+                ),
+                {"request_key": uuid.uuid4()},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(AiRun.objects.count(), 0)
+
     def test_shortcuts_cannot_select_a_foreign_story(self):
         other = Project.objects.create(user=self.owner, name="Another publication")
         foreign = Blog.objects.create(

@@ -62,6 +62,11 @@ urlpatterns = [
     ),
     path("admin/projects/<int:pk>/blogs/create", v.edit_blog, name="create_blog"),
     path("admin/blogs/<int:blog_id>/edit", v.edit_blog, name="edit_blog"),
+    path(
+        "admin/projects/<int:pk>/blogs/<int:blog_id>/social/<str:platform>",
+        v.social_version,
+        name="social_version",
+    ),
     path("admin/blogs/<int:blog_id>/autosave", v.autosave, name="autosave"),
     path("admin/blogs/<int:blog_id>/seo/report", v.report, name="report"),
     path("admin/blogs/<int:blog_id>/links", v.blog_links, name="blog_links"),

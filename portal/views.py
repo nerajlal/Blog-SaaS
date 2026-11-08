@@ -681,6 +681,74 @@ def studio(request, pk):
 
 @page
 @require_http_methods(["GET", "POST"])
+def social_version(request, pk, blog_id, platform):
+    project = project_for(request, pk)
+    blog = get_object_or_404(Blog, project=project, pk=blog_id)
+    labels = {
+        "linkedin": "LinkedIn",
+        "reddit": "Reddit",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+    }
+    if platform not in labels:
+        raise Http404
+    with transaction.atomic():
+        # Serialize first-time clicks so two tabs do not purchase the same adaptation twice.
+        Project.objects.select_for_update().get(pk=project.pk)
+        versions = AiRun.objects.filter(
+            project=project, blog=blog, action="social", platform=platform
+        ).order_by("-id")
+        saved = versions.filter(state="complete").first() or versions.first()
+        replace = request.method == "POST" and bool(request.POST.get("replace_run_id"))
+        if saved and not replace:
+            return redirect("ai_run", pk=pk, run_id=saved.pk)
+        if request.method == "POST":
+            authorize(request.user, project, "update")
+            if replace and (
+                not saved
+                or str(saved.pk) != request.POST["replace_run_id"]
+                or request.POST.get("confirm") != "1"
+            ):
+                raise ValidationError(
+                    "Review the latest saved version before requesting a replacement."
+                )
+            rate_limit(request, "ai", 10)
+            source_url = (
+                article_url(blog)
+                if Blog.objects.live().filter(pk=blog.pk).exists()
+                else ""
+            )
+            data = {
+                "brief": f"Adapt the saved article below into a {labels[platform]} post. Preserve its message and supported facts. This is a social adaptation of the existing blog, not a new blog or outline.",
+                "preferences": "Use the approved project voice and audience. Avoid inventing facts or repeating a full-length blog article.",
+                "community_rules": "",
+                "public_url": source_url or "[BLOG_URL]",
+            }
+            run = ai.enqueue(
+                project,
+                request.user,
+                "social",
+                data,
+                request.POST.get("request_key", ""),
+                blog,
+                platform,
+            )
+            return redirect("ai_run", pk=pk, run_id=run.pk)
+    return render(
+        request,
+        "portal/social_version.html",
+        {
+            "project": project,
+            "blog": blog,
+            "platform": platform,
+            "platform_label": labels[platform],
+            "request_key": uuid.uuid4(),
+        },
+    )
+
+
+@page
+@require_http_methods(["GET", "POST"])
 def ai_run(request, pk, run_id, action=None):
     project = project_for(request, pk)
     run = get_object_or_404(AiRun, pk=run_id, project=project)
