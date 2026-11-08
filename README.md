@@ -12,12 +12,12 @@ source .venv/bin/activate
 pip install -r requirements.lock
 cp .env.django.example .env.django
 python manage.py migrate
-python manage.py runserver 127.0.0.1:8001
+python manage.py runlocal
 ```
 
 Open **http://127.0.0.1:8001**, then register an account. Port 8001 avoids colliding with an existing Laravel server on 8000. Django uses `.env.django` and `.local/db.sqlite3` by default; it does not read Laravel's `.env` or connect to its existing database. Local-only secret material is generated under ignored `.local/` when DEBUG is enabled; keep it stable to read encrypted local data.
 
-Run the database worker in another terminal:
+`runlocal` starts both the development web server and its worker. If you choose `runserver` directly instead, run the database worker in another terminal:
 
 ```bash
 source .venv/bin/activate

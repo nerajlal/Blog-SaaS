@@ -10,16 +10,16 @@ Open a terminal and run:
 cd "/Applications/XAMPP/xamppfiles/htdocs/Github/blog SaaS"
 source .venv/bin/activate
 python manage.py migrate
-python manage.py runserver 127.0.0.1:8001
+python manage.py runlocal
 ```
 
 Open **http://127.0.0.1:8001** in your browser. Register an account if you have not created a Django account yet. Existing Laravel accounts are available only after an explicit data import.
 
-Leave this terminal running. Press **Control + C** to stop the server.
+This command starts both the website and the background worker. Leave this terminal running. Press **Control + C** to stop both processes started by this command. A worker that was already running is reused and remains running. If an older server is already using port 8001, stop that terminal first.
 
-## Background worker (second terminal)
+## Separate background worker (only when using runserver directly)
 
-AI generation, website analysis, link checks, and Search Console tasks need the worker. Open another terminal:
+`runlocal` already starts a worker. If you choose `python manage.py runserver 127.0.0.1:8001` instead, AI generation, website analysis, link checks, and Search Console tasks need a separate worker. Open another terminal:
 
 ```bash
 cd "/Applications/XAMPP/xamppfiles/htdocs/Github/blog SaaS"
@@ -46,7 +46,7 @@ if [ ! -f .env.django ]; then
 fi
 
 python manage.py migrate
-python manage.py runserver 127.0.0.1:8001
+python manage.py runlocal
 ```
 
 On another machine, replace the `cd` path with that checkout's directory. If Git reports unsaved changes when switching branches, review them before proceeding; do not discard them.
@@ -80,7 +80,7 @@ source .venv/bin/activate
 python -m pip install -r requirements.lock
 python manage.py migrate
 python manage.py check
-python manage.py runserver 127.0.0.1:8001
+python manage.py runlocal
 ```
 
 Start the worker again in the second terminal using the commands above.
@@ -109,7 +109,7 @@ python manage.py createsuperuser
 
 ## Local data and common issues
 
-- **Port 8001 is busy:** stop the previous Django server with Control + C, or use `python manage.py runserver 127.0.0.1:8002` and open http://127.0.0.1:8002. If using 8002 regularly, update `DJANGO_PUBLIC_URL` in `.env.django` too.
+- **Port 8001 is busy:** stop the previous Django server with Control + C, or use `python manage.py runlocal --port 8002` and open http://127.0.0.1:8002. If using 8002 regularly, update `DJANGO_PUBLIC_URL` in `.env.django` too.
 - **Task stays pending:** confirm the worker is running in the second terminal.
 - **Claude is disabled:** configure the API key/model, restart both processes, enable the workspace allowance, and approve project details.
 - **Missing database tables:** run `python manage.py migrate` with the virtual environment active.

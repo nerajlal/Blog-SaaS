@@ -1,4 +1,8 @@
 import time
+import fcntl
+import os
+from pathlib import Path
+from django.conf import settings
 from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.db import transaction, connections
@@ -15,6 +19,27 @@ class Command(BaseCommand):
         parser.add_argument("--sleep", type=float, default=2)
 
     def handle(self, *args, **options):
+        if options["once"]:
+            return self.run_loop(options)
+        runtime = Path(settings.BASE_DIR) / ".local"
+        runtime.mkdir(exist_ok=True, mode=0o700)
+        with (runtime / "worker.lock").open("a") as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                self.stdout.write(
+                    "A worker is already running for this checkout; reusing it."
+                )
+                return
+            (runtime / "worker.pid").write_text(str(os.getpid()))
+            self.stdout.write("Background worker started. Waiting for queued tasks…")
+            self.stdout.flush()
+            try:
+                return self.run_loop(options)
+            finally:
+                (runtime / "worker.pid").unlink(missing_ok=True)
+
+    def run_loop(self, options):
         while True:
             pending_cutoff = timezone.now() - timedelta(minutes=30)
             AiRun.objects.filter(state="pending", created_at__lt=pending_cutoff).update(
@@ -39,6 +64,8 @@ class Command(BaseCommand):
                     pk=item.pk, state="pending"
                 ).update(state="running", updated_at=timezone.now())
             if claimed:
+                self.stdout.write(f"Processing task #{item.pk} ({item.kind})…")
+                self.stdout.flush()
                 try:
                     execute(item)
                     state = "complete"
@@ -62,6 +89,8 @@ class Command(BaseCommand):
                 WorkItem.objects.filter(pk=item.pk).update(
                     state=state, detail=detail, updated_at=timezone.now()
                 )
+                self.stdout.write(f"Task #{item.pk}: {state}.")
+                self.stdout.flush()
             if options["once"]:
                 return
             connections.close_all()

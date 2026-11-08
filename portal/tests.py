@@ -834,3 +834,24 @@ class AiDiagnosticsTests(TestCase):
         self.assertEqual(run.request_id, "req_diagnostic")
         self.assertEqual(run.usage["stop_reason"], "max_tokens")
         self.assertEqual(run.result, {})
+
+
+class LocalLauncherTests(TestCase):
+    @override_settings(DEBUG=True)
+    def test_local_launcher_starts_both_processes_and_cleans_up(self):
+        worker = Mock()
+        web = Mock()
+        worker.poll.return_value = None
+        web.poll.return_value = None
+        with patch(
+            "portal.management.commands.runlocal.subprocess.Popen",
+            side_effect=[worker, web],
+        ) as launch:
+            call_command("runlocal", "--port", "8012", stdout=io.StringIO())
+        self.assertEqual(launch.call_count, 2)
+        self.assertEqual(launch.call_args_list[0].args[0][-1], "work")
+        self.assertEqual(
+            launch.call_args_list[1].args[0][-2:], ["runserver", "127.0.0.1:8012"]
+        )
+        worker.terminate.assert_called_once()
+        web.terminate.assert_called_once()
