@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 from .models import *
-from .services import can_access, fetch_public, article_url, rebuild_links
+from .services import can_access, fetch_public, article_url, rebuild_links, analyze
 from . import ai
 
 
@@ -93,6 +93,24 @@ def execute(item):
                 detail=ai.failure_detail(error),
             )
             raise
+    elif item.kind == "seo_analyze":
+        payload = item.payload.copy()
+        batch = list(
+            item.project.blogs.filter(
+                pk__gt=payload.get("cursor", 0), pk__lte=payload["max_id"]
+            ).order_by("id")[:50]
+        )
+        for blog in batch:
+            analyze(blog)
+        if batch:
+            payload["cursor"] = batch[-1].pk
+            payload["processed"] = payload.get("processed", 0) + len(batch)
+        item.payload = payload
+        item.save(update_fields=["payload", "updated_at"])
+        if item.project.blogs.filter(
+            pk__gt=payload.get("cursor", 0), pk__lte=payload["max_id"]
+        ).exists():
+            return "pending"
     elif item.kind == "links":
         rebuild_links(item.project)
     elif item.kind == "check_links":
@@ -200,3 +218,6 @@ def execute(item):
             SearchInspection.objects.filter(
                 pk=inspection.pk, connection=connection
             ).update(result=result, state="complete")
+
+    else:
+        raise ValidationError("Unknown background task kind.")

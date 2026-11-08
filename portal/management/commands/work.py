@@ -67,8 +67,8 @@ class Command(BaseCommand):
                 self.stdout.write(f"Processing task #{item.pk} ({item.kind})…")
                 self.stdout.flush()
                 try:
-                    execute(item)
-                    state = "complete"
+                    continuation = execute(item)
+                    state = "pending" if continuation == "pending" else "complete"
                     detail = ""
                 except Exception:
                     state = "failed"

@@ -9,3 +9,5 @@
 .social-platform-picker{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 12px}.social-platform-picker .social-version{padding:9px 15px;font-size:12px}.social-version-help{font-size:12px;margin-bottom:23px}
 
 .story-social-actions form{margin:0}.social-source-note{display:block;max-width:480px;margin-top:8px;color:#71818b;font-size:10px;line-height:1.5}
+
+.seo-check-list{list-style:none;padding:0;margin:22px 0}.seo-check-list li{padding:11px 0;border-bottom:1px solid #edf1f5}.seo-check-list small{display:block;color:#71818b;font-size:12px;line-height:1.6;margin:5px 0 0 20px}

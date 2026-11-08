@@ -573,50 +573,163 @@ def blog_payload(blog):
     return data
 
 
-def analyze(blog):
-    text = strip_tags(
-        blog.content
-        + " "
-        + " ".join(blog.sections.values_list("text_content", flat=True))
-    )
-    words = re.findall(r"\b\w+\b", text)
-    focus = blog.seo_settings.get("focus_keyphrase", "").lower()
-    checks = [
-        ("Title length", 20 <= len(blog.title) <= 70),
-        (
-            "Description length",
-            70 <= len(blog.seo_settings.get("description", "")) <= 160,
-        ),
-        ("Useful content length", len(words) >= 300),
-        ("Focus phrase in title", bool(focus and focus in blog.title.lower())),
-        (
-            "Cover image alternative",
-            bool(blog.cover_image_alt or blog.cover_image_decorative),
-        ),
-        (
-            "Paragraphs and headings",
-            bool(
-                re.search(
-                    r"<h[2-4]",
-                    blog.content
-                    + " ".join(blog.sections.values_list("text_content", flat=True)),
+SEO_RULES_VERSION = "django-2"
+
+
+def seo_input_hash(blog):
+    # Publication/review timestamps do not change these on-page content checks.
+    return digest(
+        {
+            "title": blog.title,
+            "excerpt": blog.excerpt,
+            "content": blog.content,
+            "seo": blog.seo_settings,
+            "cover": blog.cover_image,
+            "cover_alt": blog.cover_image_alt,
+            "cover_decorative": blog.cover_image_decorative,
+            "cornerstone": blog.is_cornerstone,
+            "sections": list(
+                blog.sections.values(
+                    "text_content", "image_path", "image_alt", "image_decorative"
                 )
             ),
+        }
+    )
+
+
+def seo_context_hash(project):
+    return digest(project.seo_settings)
+
+
+def analysis_is_stale(analysis, blog):
+    return (
+        not analysis
+        or analysis.report.get("rules_version") != SEO_RULES_VERSION
+        or analysis.input_hash != seo_input_hash(blog)
+        or analysis.report.get("context_hash") != seo_context_hash(blog.project)
+    )
+
+
+def analyze(blog):
+    latest = blog.analyses.order_by("-id").first()
+    if not analysis_is_stale(latest, blog):
+        return latest
+    sections = list(blog.sections.all())
+    markup = blog.content + " " + " ".join(s.text_content for s in sections)
+    text = re.sub(
+        r"\s+",
+        " ",
+        html.unescape(
+            strip_tags(
+                re.sub(r"</?(?:p|li|h[1-6]|br)\b[^>]*>", " ", markup, flags=re.I)
+            )
         ),
-    ]
-    sentences = max(1, len(re.findall(r"[.!?]", text)))
-    avg = len(words) / sentences
-    score = round(sum(ok for _, ok in checks) / len(checks) * 100)
+    ).strip()
+    words = re.findall(r"\b\w+\b", text)
+    resolved = seo_payload(blog)
+    title = resolved["title"]
+    description = resolved["description"]
+    focus = (blog.seo_settings.get("focus_keyphrase") or "").strip().casefold()
+    checks = []
+
+    def check(key, label, passed, detail):
+        checks.append(
+            {
+                "key": key,
+                "label": label,
+                "passed": passed,
+                "status": "not_applicable"
+                if passed is None
+                else "pass"
+                if passed
+                else "needs_attention",
+                "detail": detail,
+            }
+        )
+
+    check(
+        "title",
+        "SEO title length",
+        20 <= len(title) <= 70,
+        f"{len(title)} characters. App guidance: 20–70 for a concise search title; this is not a Google limit. Set a separate SEO title without changing the article heading.",
+    )
+    check(
+        "description",
+        "Description length",
+        70 <= len(description) <= 160,
+        f"{len(description)} characters. App guidance: 70–160; write a useful summary, not a ranking promise.",
+    )
+    minimum = 600 if blog.is_cornerstone else 300
+    check(
+        "length",
+        "Content coverage",
+        len(words) >= minimum,
+        f"{len(words)} words. This app uses {minimum} as a long-form review prompt; word count alone does not prove quality.",
+    )
+    check(
+        "focus_title",
+        "Focus phrase in SEO title",
+        bool(focus and focus in title.casefold()),
+        "Choose a relevant focus phrase and use it naturally in the SEO title."
+        if not focus or focus not in title.casefold()
+        else "The selected focus phrase appears in the SEO title.",
+    )
+    check(
+        "focus_body",
+        "Focus phrase in article",
+        focus in text.casefold() if focus else None,
+        "Select a focus phrase first."
+        if not focus
+        else "Check that the selected phrase accurately describes the article and appears naturally in its text.",
+    )
+    if blog.cover_image:
+        check(
+            "cover_alt",
+            "Cover image alternative",
+            bool(blog.cover_image_alt.strip() or blog.cover_image_decorative),
+            "Describe the actual image, or explicitly mark a purely decorative image. Do not invent alt text from a topic alone.",
+        )
+    else:
+        check(
+            "cover_alt",
+            "Cover image alternative",
+            None,
+            "No cover image attached. This check applies only when a cover image is present.",
+        )
+    images = [section for section in sections if section.image_path]
+    check(
+        "section_alt",
+        "Section image alternatives",
+        all(section.image_alt.strip() or section.image_decorative for section in images)
+        if images
+        else None,
+        "Describe each actual section image or mark it decorative."
+        if images
+        else "No section images attached.",
+    )
+    check(
+        "headings",
+        "Paragraphs and headings",
+        bool(re.search(r"<h[2-4](?:\s|>)", markup, re.I)),
+        "Use descriptive subheadings to organize a longer article for readers.",
+    )
+    sentences = max(1, len(re.findall(r"[.!?]+(?:\s|$)", text)))
+    average = len(words) / sentences
     report = {
-        "seo_score": score,
-        "readability_score": max(0, min(100, round(120 - avg * 3))),
+        "seo_score": round(
+            sum(c["passed"] is True for c in checks)
+            / max(1, sum(c["passed"] is not None for c in checks))
+            * 100
+        ),
+        "readability_score": max(0, min(100, round(120 - average * 3))),
         "word_count": len(words),
-        "checks": [{"label": name, "passed": ok} for name, ok in checks],
-        "rules_version": "django-1",
-        "context_hash": project_context_hash(blog.project),
+        "checks": checks,
+        "rules_version": SEO_RULES_VERSION,
+        "context_hash": seo_context_hash(blog.project),
+        "score_note": "Local editorial checks only; not a Google ranking score or factual-quality guarantee.",
     }
     return SeoAnalysis.objects.create(
-        blog=blog, input_hash=revision(blog), report=report
+        blog=blog, input_hash=seo_input_hash(blog), report=report
     )
 
 
@@ -880,5 +993,8 @@ def commit_batch(batch, undo=False):
                     )
                 )
             )
+        if batch.kind == "metadata":
+            for change in batch.changes:
+                analyze(Blog.objects.get(pk=change["id"], project=batch.project))
         batch.state = "reverted" if undo else "applied"
         batch.save()

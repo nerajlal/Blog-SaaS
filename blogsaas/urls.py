@@ -87,6 +87,11 @@ urlpatterns = [
     path("admin/projects/<int:pk>/seo", v.seo_settings, name="seo_settings"),
     path("admin/projects/<int:pk>/seo/verify", v.verify_domain, name="verify_domain"),
     path("admin/projects/<int:pk>/seo/health", v.health, name="health"),
+    path(
+        "admin/projects/<int:pk>/seo/health/status/<int:job_id>",
+        v.health_status,
+        name="health_status",
+    ),
     path("admin/projects/<int:pk>/links", v.links, name="links"),
     path("admin/projects/<int:pk>/not-found", v.telemetry, name="telemetry"),
     path("admin/search-console/callback", v.google_callback, name="google_callback"),

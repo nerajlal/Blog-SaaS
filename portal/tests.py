@@ -1007,3 +1007,163 @@ class SocialShortcutTests(TestCase):
             ).status_code,
             404,
         )
+
+
+class SeoQualityTests(TestCase):
+    setUp = PortalTests.setUp
+    profile = PortalTests.profile
+
+    def test_checks_use_seo_title_and_do_not_penalize_absent_images(self):
+        self.blog.title = "A very long editorial headline " + (
+            "for fragrance readers " * 5
+        )
+        self.blog.seo_settings = {
+            "title": "Fresh perfume: a useful sampling guide",
+            "description": "A clear practical guide to fresh perfume, scent families and sampling choices for readers exploring their next everyday fragrance.",
+            "focus_keyphrase": "fresh perfume",
+        }
+        self.blog.save()
+        report = analyze(self.blog).report
+        checks = {row["key"]: row for row in report["checks"]}
+        self.assertTrue(checks["title"]["passed"])
+        self.assertTrue(checks["focus_title"]["passed"])
+        self.assertEqual(checks["cover_alt"]["status"], "not_applicable")
+        self.assertEqual(checks["section_alt"]["status"], "not_applicable")
+        applicable = [row for row in report["checks"] if row["passed"] is not None]
+        self.assertEqual(
+            report["seo_score"],
+            round(sum(row["passed"] for row in applicable) / len(applicable) * 100),
+        )
+
+    def test_publishing_reviewing_and_other_stories_do_not_invalidate_content_checks(
+        self,
+    ):
+        analysis = analyze(self.blog)
+        self.blog.status = "published"
+        self.blog.published_at = timezone.now()
+        self.blog.content_reviewed_at = timezone.now()
+        self.blog.save()
+        Blog.objects.create(
+            project=self.project, user=self.owner, title="An unrelated new story"
+        )
+        self.assertFalse(analysis_is_stale(analysis, self.blog))
+        self.blog.sections.first().delete()
+        self.assertTrue(analysis_is_stale(analysis, self.blog))
+
+    def test_analyze_all_queues_and_covers_more_than_fifty_stories(self):
+        Blog.objects.bulk_create(
+            [
+                Blog(
+                    project=self.project,
+                    user=self.owner,
+                    title=f"Story {n}",
+                    slug=f"quality-story-{n}",
+                )
+                for n in range(55)
+            ]
+        )
+        self.client.post(reverse("health", args=[self.project.pk]))
+        job = WorkItem.objects.get(kind="seo_analyze")
+        self.assertEqual(job.payload["total"], 56)
+        call_command("work", "--once", stdout=io.StringIO())
+        job.refresh_from_db()
+        self.assertEqual(job.state, "pending")
+        self.assertEqual(job.payload["processed"], 50)
+        call_command("work", "--once", stdout=io.StringIO())
+        job.refresh_from_db()
+        self.assertEqual(job.state, "complete")
+        self.assertEqual(job.payload["processed"], 56)
+        self.assertEqual(SeoAnalysis.objects.count(), 56)
+        response = self.client.get(reverse("health", args=[self.project.pk]))
+        self.assertContains(response, "Analyze all 56 stories")
+        self.assertEqual(len(response.context["rows"]), 25)
+
+    def test_reviewed_metadata_is_applied_without_changing_the_article(self):
+        self.profile()
+        before = revision(self.blog)
+        text = self.blog.sections.first().text_content
+        result = {
+            "excerpt": "A summary",
+            "seo_title": "Fresh perfume: a useful sampling guide",
+            "seo_description": "A practical guide to finding fresh perfume, understanding scent families and sampling fragrances before choosing an everyday bottle.",
+            "focus_keyphrase": "fresh perfume",
+            "warnings": "",
+        }
+        run = AiRun.objects.create(
+            project=self.project,
+            user=self.owner,
+            blog=self.blog,
+            profile_version=ai.approved(self.project),
+            action="metadata",
+            fingerprint="seo-test",
+            state="complete",
+            input={"blog_revision": before},
+            result=result,
+            reviewed_at=timezone.now(),
+        )
+        response = self.client.post(
+            reverse("ai_run_action", args=[self.project.pk, run.pk, "apply-seo"])
+        )
+        self.assertRedirects(response, reverse("report", args=[self.blog.pk]))
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.seo_settings["title"], result["seo_title"])
+        self.assertEqual(self.blog.seo_settings["focus_keyphrase"], "fresh perfume")
+        self.assertEqual(self.blog.sections.first().text_content, text)
+        self.assertEqual(self.blog.status, "draft")
+        self.assertFalse(analysis_is_stale(self.blog.analyses.latest("id"), self.blog))
+
+    def test_ai_draft_creation_saves_seo_metadata_and_analyzes_immediately(self):
+        self.profile()
+        result = {
+            "title": "An editorial guide to fragrance discovery",
+            "excerpt": "Try samples before choosing a fragrance.",
+            "body_html": "<h2>Fresh perfume choices</h2><p>Explore fresh perfume through sampling.</p>",
+            "seo_title": "Fresh perfume: a practical discovery guide",
+            "seo_description": "A practical guide to fresh perfume, sampling different scent families and choosing an everyday fragrance that suits your preferences.",
+            "focus_keyphrase": "fresh perfume",
+            "warnings": "",
+        }
+        run = AiRun.objects.create(
+            project=self.project,
+            user=self.owner,
+            profile_version=ai.approved(self.project),
+            action="draft",
+            fingerprint="new-seo-draft",
+            state="complete",
+            reviewed_at=timezone.now(),
+            result=result,
+        )
+        response = self.client.post(
+            reverse("ai_run_action", args=[self.project.pk, run.pk, "draft"]),
+            {"category_id": self.category.pk},
+        )
+        run.refresh_from_db()
+        created = Blog.objects.get(pk=run.output_blog_id)
+        self.assertRedirects(response, reverse("edit_blog", args=[created.pk]))
+        self.assertEqual(created.seo_settings["title"], result["seo_title"])
+        self.assertEqual(created.seo_settings["focus_keyphrase"], "fresh perfume")
+        self.assertEqual(created.status, "draft")
+        self.assertFalse(analysis_is_stale(created.analyses.latest("id"), created))
+
+    def test_new_generation_requires_seo_fields_but_older_saved_results_remain_editable(
+        self,
+    ):
+        old = {
+            "title": "A useful guide",
+            "excerpt": "Summary",
+            "body_html": "<p>Text</p>",
+            "seo_description": "A clear and useful practical description for readers who want to discover fragrance samples and understand scent families.",
+            "warnings": "",
+        }
+        self.assertEqual(ai.validate_result("draft", old)["seo_title"], "")
+        with self.assertRaises(ValidationError):
+            ai.validate_result("draft", old, strict=True)
+        new = {
+            **old,
+            "seo_title": "Fresh perfume: a useful sampling guide",
+            "focus_keyphrase": "fresh perfume",
+        }
+        self.assertEqual(
+            ai.validate_result("draft", new, strict=True)["focus_keyphrase"],
+            "fresh perfume",
+        )

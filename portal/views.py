@@ -387,6 +387,8 @@ def blog_action(request, blog_id, action):
             BlogAutosave.objects.filter(blog=blog).delete()
         else:
             raise Http404
+        if action != "delete":
+            analyze(blog)
     return redirect("project", pk=project.pk)
 
 
@@ -600,7 +602,11 @@ def studio(request, pk):
         request.POST or None,
         initial={
             "request_key": uuid.uuid4(),
-            "action": "social" if blog else "outline",
+            "action": request.GET.get("action")
+            if blog and request.GET.get("action") in ["metadata", "titles", "rewrite"]
+            else "social"
+            if blog
+            else "outline",
             "platform": selected_platform,
             "brief": f"Create a {dict(platforms)[selected_platform]} version of this article, using its key points and the approved brand facts."
             if selected_platform
@@ -797,13 +803,52 @@ def ai_run(request, pk, run_id, action=None):
                     category=category,
                     title=result["title"],
                     excerpt=result["excerpt"],
-                    seo_settings={"description": result["seo_description"]},
+                    seo_settings={
+                        "description": result["seo_description"],
+                        "title": result.get("seo_title", ""),
+                        "focus_keyphrase": result.get("focus_keyphrase", ""),
+                    },
                     status="draft",
                 )
                 BlogSection.objects.create(blog=blog, text_content=result["body_html"])
+                analyze(blog)
                 run.output_blog = blog
                 run.save()
                 return redirect("edit_blog", blog_id=blog.pk)
+            elif action == "apply-seo":
+                if (
+                    run.action != "metadata"
+                    or not run.blog_id
+                    or run.state != "complete"
+                    or not run.reviewed_at
+                ):
+                    raise ValidationError("Save and review the SEO suggestions first.")
+                blog = Blog.objects.select_for_update().get(
+                    pk=run.blog_id, project=project
+                )
+                if ai.stale(run):
+                    raise ValidationError(
+                        "The story or profile changed. Generate current SEO suggestions first."
+                    )
+                result = run.edited or run.result
+                if not result.get("seo_title") or not result.get("focus_keyphrase"):
+                    raise ValidationError(
+                        "Supply an SEO title and focus phrase before applying."
+                    )
+                blog.seo_settings = {
+                    **blog.seo_settings,
+                    "title": result["seo_title"],
+                    "description": result["seo_description"],
+                    "focus_keyphrase": result["focus_keyphrase"],
+                }
+                blog.revision += 1
+                blog.save()
+                analyze(blog)
+                messages.success(
+                    request,
+                    "Reviewed SEO metadata applied. Article text and publication status were preserved.",
+                )
+                return redirect("report", blog_id=blog.pk)
             elif action == "generate-draft":
                 if (
                     run.action != "outline"
@@ -965,51 +1010,85 @@ def verify_domain(request, pk):
 @require_http_methods(["GET", "POST"])
 def health(request, pk, blog_id=None):
     project = project_for(request, pk, "update" if request.method == "POST" else "view")
-    blogs = (
-        project.blogs.filter(pk=blog_id)
-        if blog_id
-        else project.blogs.order_by("-id")[:50]
-    )
+    query = project.blogs.order_by("-id")
+    if blog_id:
+        query = query.filter(pk=blog_id)
     if request.method == "POST":
-        for blog in blogs:
+        if blog_id:
+            blog = get_object_or_404(query)
             if request.POST.get("operation") == "review":
-                note = request.POST.get("note", "")[:4000]
                 SeoReview.objects.create(
-                    blog=blog, user=request.user, input_hash=revision(blog), note=note
+                    blog=blog,
+                    user=request.user,
+                    input_hash=seo_input_hash(blog),
+                    note=request.POST.get("note", "")[:4000],
                 )
                 blog.content_reviewed_at = timezone.now()
                 blog.save()
-            else:
-                analyze(blog)
-        return (
-            redirect("report", blog_id=blog_id)
-            if blog_id
-            else redirect("health", pk=pk)
+            analyze(blog)
+            return redirect("report", blog_id=blog_id)
+        with transaction.atomic():
+            Project.objects.select_for_update().get(pk=pk)
+            active = WorkItem.objects.filter(
+                project=project, kind="seo_analyze", state__in=["pending", "running"]
+            ).first()
+            if not active and query.exists():
+                WorkItem.objects.create(
+                    project=project,
+                    user=request.user,
+                    kind="seo_analyze",
+                    payload={
+                        "cursor": 0,
+                        "max_id": query.first().pk,
+                        "processed": 0,
+                        "total": query.count(),
+                    },
+                )
+        messages.success(
+            request,
+            "Whole-project analysis queued. This uses local checks, not a paid AI request.",
         )
+        return redirect("health", pk=pk)
+    listing = Paginator(query, 25).get_page(request.GET.get("page"))
     rows = []
-    for blog in blogs:
+    for blog in listing:
         analysis = blog.analyses.order_by("-id").first()
         rows.append(
             {
                 "blog": blog,
                 "analysis": analysis,
-                "stale": bool(
-                    analysis
-                    and (
-                        analysis.input_hash != revision(blog)
-                        or (
-                            analysis.report.get("context_hash")
-                            and analysis.report["context_hash"]
-                            != project_context_hash(project)
-                        )
-                    )
-                ),
+                "stale": analysis_is_stale(analysis, blog) if analysis else False,
             }
         )
+    job = (
+        WorkItem.objects.filter(project=project, kind="seo_analyze")
+        .order_by("-id")
+        .first()
+    )
     return render(
         request,
         "portal/health.html",
-        {"project": project, "rows": rows, "single": bool(blog_id)},
+        {
+            "project": project,
+            "rows": rows,
+            "single": bool(blog_id),
+            "page": listing,
+            "total_stories": query.count(),
+            "analysis_job": job,
+        },
+    )
+
+
+@page
+def health_status(request, pk, job_id):
+    project = project_for(request, pk)
+    job = get_object_or_404(WorkItem, pk=job_id, project=project, kind="seo_analyze")
+    return JsonResponse(
+        {
+            "state": job.state,
+            "processed": job.payload.get("processed", 0),
+            "total": job.payload.get("total", 0),
+        }
     )
 
 
