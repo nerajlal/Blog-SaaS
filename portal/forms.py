@@ -286,7 +286,12 @@ class AiRequestForm(forms.Form):
     platform = forms.ChoiceField(
         required=False,
         choices=[("", "Choose a platform")]
-        + [(x, x.title()) for x in ["linkedin", "reddit", "facebook", "instagram"]],
+        + [
+            ("linkedin", "LinkedIn"),
+            ("reddit", "Reddit"),
+            ("facebook", "Facebook"),
+            ("instagram", "Instagram"),
+        ],
     )
     community_rules = forms.CharField(
         required=False, max_length=4000, widget=forms.Textarea(attrs={"rows": 3})

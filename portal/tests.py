@@ -855,3 +855,84 @@ class LocalLauncherTests(TestCase):
         )
         worker.terminate.assert_called_once()
         web.terminate.assert_called_once()
+
+
+class SocialShortcutTests(TestCase):
+    setUp = PortalTests.setUp
+    profile = PortalTests.profile
+
+    def test_platform_buttons_prefill_story_and_filter_saved_versions_without_charges(
+        self,
+    ):
+        self.profile()
+        for platform in ["linkedin", "reddit", "facebook", "instagram"]:
+            AiRun.objects.create(
+                project=self.project,
+                user=self.owner,
+                blog=self.blog,
+                action="social",
+                platform=platform,
+                state="complete",
+                fingerprint=platform,
+                result={
+                    "title": "Example",
+                    "body": "Example body",
+                    "hashtags": "",
+                    "carousel": "",
+                    "warnings": "",
+                },
+            )
+        response = self.client.get(reverse("project", args=[self.project.pk]))
+        for name in [
+            "LinkedIn version",
+            "Reddit version",
+            "Facebook version",
+            "Instagram version",
+        ]:
+            self.assertContains(response, name)
+        for platform in ["linkedin", "reddit", "facebook", "instagram"]:
+            response = self.client.get(
+                reverse("studio", args=[self.project.pk]),
+                {"blog": self.blog.pk, "platform": platform},
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.context["form"]["action"].value(), "social")
+            self.assertEqual(response.context["form"]["platform"].value(), platform)
+            self.assertEqual(response.context["blog"].pk, self.blog.pk)
+            self.assertEqual(
+                {item.platform for item in response.context["runs"]}, {platform}
+            )
+        self.assertEqual(WorkItem.objects.count(), 0)
+        self.assertEqual(AiUsage.objects.count(), 0)
+
+    def test_platform_history_pagination_preserves_story_and_platform(self):
+        for number in range(13):
+            AiRun.objects.create(
+                project=self.project,
+                user=self.owner,
+                blog=self.blog,
+                action="social",
+                platform="linkedin",
+                fingerprint=str(number),
+                state="complete",
+            )
+        response = self.client.get(
+            reverse("studio", args=[self.project.pk]),
+            {"blog": self.blog.pk, "platform": "linkedin"},
+        )
+        self.assertContains(
+            response, f"blog={self.blog.pk}&amp;platform=linkedin&amp;page=2"
+        )
+
+    def test_shortcuts_cannot_select_a_foreign_story(self):
+        other = Project.objects.create(user=self.owner, name="Another publication")
+        foreign = Blog.objects.create(
+            project=other, user=self.owner, title="Foreign story"
+        )
+        self.assertEqual(
+            self.client.get(
+                reverse("studio", args=[self.project.pk]),
+                {"blog": foreign.pk, "platform": "linkedin"},
+            ).status_code,
+            404,
+        )

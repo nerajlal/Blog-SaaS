@@ -579,11 +579,35 @@ def studio(request, pk):
         if request.GET.get("blog") or request.POST.get("blog_id")
         else None
     )
+    platforms = [
+        ("linkedin", "LinkedIn"),
+        ("reddit", "Reddit"),
+        ("facebook", "Facebook"),
+        ("instagram", "Instagram"),
+    ]
+    selected_platform = (
+        (
+            request.POST.get("platform")
+            if request.method == "POST"
+            else request.GET.get("platform", "")
+        )
+        if blog
+        else ""
+    )
+    if selected_platform not in dict(platforms):
+        selected_platform = ""
     form = AiRequestForm(
         request.POST or None,
         initial={
             "request_key": uuid.uuid4(),
             "action": "social" if blog else "outline",
+            "platform": selected_platform,
+            "brief": f"Create a {dict(platforms)[selected_platform]} version of this article, using its key points and the approved brand facts."
+            if selected_platform
+            else "",
+            "public_url": article_url(blog)
+            if blog and Blog.objects.live().filter(pk=blog.pk).exists()
+            else "",
         },
     )
     if request.method == "POST":
@@ -636,6 +660,8 @@ def studio(request, pk):
     runs = AiRun.objects.filter(project=project).order_by("-id")
     if blog:
         runs = runs.filter(blog=blog)
+    if selected_platform:
+        runs = runs.filter(action="social", platform=selected_platform)
     return render(
         request,
         "portal/studio.html",
@@ -644,6 +670,9 @@ def studio(request, pk):
             "blog": blog,
             "form": form,
             "runs": Paginator(runs, 12).get_page(request.GET.get("page")),
+            "social_platforms": platforms,
+            "selected_platform": selected_platform,
+            "selected_platform_label": dict(platforms).get(selected_platform, ""),
             "approved": ai.approved(project),
             "ready": ai.ready(),
         },

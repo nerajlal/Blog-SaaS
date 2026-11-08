@@ -128,3 +128,7 @@ Retain the existing certificate and HTTPS redirect, configure `client_max_body_s
 ### Draft-generation diagnostics
 
 Full drafts have an 8,192-token output ceiling and a 180-second read timeout; smaller tasks keep a 4,096-token ceiling and a 90-second read timeout. These are maximum allowances, not promised output sizes or fixed costs. Provider request IDs, HTTP status, stop reasons and returned token usage are retained even when response validation fails. User-facing errors use controlled descriptions rather than raw provider responses or credentials. Failed tasks are not automatically retried. Restart long-running workers after updating backend code, then explicitly generate a new request from the reviewed outline if needed.
+
+### Social version shortcuts
+
+Each story row now has LinkedIn, Reddit, Facebook, and Instagram version buttons. They open the saved story in AI studio with the platform and a relevant brief selected. A verified public article URL is prefilled only for currently published stories; other stories keep the link-placeholder workflow. Saved suggestion history is filtered by that story/platform, including when paginating. Opening a shortcut performs no paid generation and posts nothing externally; the writer still reviews the context, consents, and submits generation.
