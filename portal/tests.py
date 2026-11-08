@@ -443,6 +443,8 @@ class PortalTests(TestCase):
         self.assertEqual(run.pk, again.pk)
         self.assertEqual(AiUsage.objects.get().requests, 1)
         response = Mock()
+        response.status_code = 200
+        response.headers = {}
         response.raise_for_status.return_value = None
         response.headers = {"request-id": "test-request"}
         response.json.return_value = {
@@ -668,6 +670,8 @@ class PortalTests(TestCase):
             self.project, self.owner, "outline", {"brief": "First"}, uuid.uuid4()
         )
         response = Mock()
+        response.status_code = 200
+        response.headers = {}
         response.raise_for_status.return_value = None
         response.json.return_value = {"stop_reason": "max_tokens", "content": []}
         with patch("portal.ai.requests.post", return_value=response):
@@ -782,3 +786,51 @@ class CrawlerTests(TestCase):
         self.assertFalse(
             policy.can_fetch("BlogSaaS-AI", "https://example.com/page?secret=value")
         )
+
+
+class AiDiagnosticsTests(TestCase):
+    def test_provider_errors_are_specific_and_never_include_raw_response(self):
+        import requests
+
+        response = requests.Response()
+        response.status_code = 401
+        response._content = b'{"message":"secret credential or prompt"}'
+        detail = ai.failure_detail(requests.HTTPError(response=response))
+        self.assertIn("invalid or expired", detail)
+        self.assertNotIn("secret", detail)
+        self.assertIn("timed out", ai.failure_detail(requests.ReadTimeout()))
+
+    @override_settings(
+        AI_ENABLED=True, ANTHROPIC_API_KEY="test-only", CLAUDE_MODEL="test-model"
+    )
+    def test_draft_budget_and_truncation_diagnostics_are_preserved(self):
+        user = User.objects.create_user(
+            username="diagnostics", email="diagnostics@example.com"
+        )
+        project = Project.objects.create(user=user, name="Diagnostics")
+        run = AiRun.objects.create(
+            project=project,
+            user=user,
+            action="draft",
+            fingerprint="diagnostics",
+            model="test-model",
+            input={},
+        )
+        response = Mock()
+        response.status_code = 200
+        response.headers = {"request-id": "req_diagnostic"}
+        response.raise_for_status.return_value = None
+        response.json.return_value = {
+            "stop_reason": "max_tokens",
+            "content": [],
+            "usage": {"input_tokens": 100, "output_tokens": 8192},
+        }
+        with patch("portal.ai.requests.post", return_value=response) as provider:
+            with self.assertRaisesMessage(ValidationError, "output limit"):
+                ai.generate(run)
+            self.assertEqual(provider.call_args.kwargs["json"]["max_tokens"], 8192)
+            self.assertEqual(provider.call_args.kwargs["timeout"], (8, 180))
+        run.refresh_from_db()
+        self.assertEqual(run.request_id, "req_diagnostic")
+        self.assertEqual(run.usage["stop_reason"], "max_tokens")
+        self.assertEqual(run.result, {})

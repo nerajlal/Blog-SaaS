@@ -87,10 +87,10 @@ def execute(item):
                 current.request_id = request_id
                 current.state = "complete" if valid else "cancelled"
                 current.save()
-        except Exception:
+        except Exception as error:
             AiRun.objects.filter(pk=run.pk, state="running").update(
                 state="failed",
-                detail="Claude or source processing failed. Check configuration, quota, selected pages, and response format. No automatic retry was made.",
+                detail=ai.failure_detail(error),
             )
             raise
     elif item.kind == "links":

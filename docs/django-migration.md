@@ -124,3 +124,7 @@ Retain the existing certificate and HTTPS redirect, configure `client_max_body_s
 - A paused/dead worker can leave tasks pending until it resumes. Stale tasks are marked failed without automatic paid retries. No automatic age-based deletion of AI content is configured.
 - Uploaded replacement/deleted-story files are not automatically garbage-collected. Plan explicit, reference-aware media retention/cleanup after migration rather than deleting user files during conversion.
 - Live Anthropic calls, real Google OAuth, actual DNS verification, MySQL staging, real-data import and production cutover require environment/account access and have not been performed by this conversion.
+
+### Draft-generation diagnostics
+
+Full drafts have an 8,192-token output ceiling and a 180-second read timeout; smaller tasks keep a 4,096-token ceiling and a 90-second read timeout. These are maximum allowances, not promised output sizes or fixed costs. Provider request IDs, HTTP status, stop reasons and returned token usage are retained even when response validation fails. User-facing errors use controlled descriptions rather than raw provider responses or credentials. Failed tasks are not automatically retried. Restart long-running workers after updating backend code, then explicitly generate a new request from the reviewed outline if needed.
