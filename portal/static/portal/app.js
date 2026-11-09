@@ -31,3 +31,15 @@ window.addEventListener('beforeunload',event=>{if(reviewDirty){event.preventDefa
 
 document.querySelectorAll('[data-move-project]').forEach(select=>select.addEventListener('change',()=>{const category=select.form.querySelector('[data-move-category]');category.value='';category.querySelectorAll('[data-project]').forEach(option=>{option.disabled=option.dataset.project!==select.value;option.hidden=option.disabled;});}));
 const aiAction=document.getElementById('id_action');if(aiAction){const update=()=>{const optional={social:['platform','community_rules','public_url'],rewrite:['selected_text'],analyze:['urls','source_text']};for(const name of ['platform','community_rules','public_url','selected_text','urls','source_text']){const input=aiAction.form.elements[name];if(input){const visible=(optional[aiAction.value]||[]).includes(name);input.closest('p').hidden=!visible;input.disabled=!visible;}}};aiAction.addEventListener('change',update);update();}
+
+// Keep social drafts local until the user chooses to share them.
+document.querySelectorAll('[data-linkedin-copy]').forEach(link=>link.addEventListener('click',event=>{
+ const body=document.getElementById('result-body')?.value.trim()||'';
+ const hashtags=document.getElementById('result-hashtags')?.value.trim()||'';
+ const status=document.getElementById('linkedin-copy-status');
+ if(!body){event.preventDefault();status.textContent='Add post text before opening LinkedIn.';return;}
+ const text=body+(hashtags&&!body.includes(hashtags)?'\n\n'+hashtags:'');
+ const success=()=>{status.textContent='Post copied. In LinkedIn, click Start a post and paste it. Review before publishing.';};
+ const fallback=()=>{const field=document.createElement('textarea');field.value=text;field.style.position='fixed';field.style.opacity='0';document.body.append(field);field.select();let copied=false;try{copied=document.execCommand('copy');}catch{}field.remove();if(copied)success();else{status.textContent='Clipboard access was blocked. Use Copy Body or select and copy the text, then paste it into LinkedIn.';document.getElementById('result-body')?.focus();}};
+ if(navigator.clipboard?.writeText){navigator.clipboard.writeText(text).then(success,fallback);}else{fallback();}
+}));

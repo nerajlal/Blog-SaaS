@@ -341,6 +341,37 @@ class PortalTests(TestCase):
         redirect.refresh_from_db()
         self.assertEqual(redirect.source_hash, hashlib.sha256(b"/changed").hexdigest())
 
+    def test_linkedin_copy_open_uses_existing_social_result(self):
+        profile = self.profile()
+        run = AiRun.objects.create(
+            project=self.project,
+            user=self.owner,
+            profile_version=self.project.ai_versions.first(),
+            blog=self.blog,
+            action="social",
+            platform="linkedin",
+            state="complete",
+            fingerprint="test",
+            result={
+                "title": "Title",
+                "body": "Existing LinkedIn post",
+                "hashtags": "#Perfume",
+                "carousel": "",
+                "warnings": "",
+            },
+        )
+        response = self.client.get(reverse("ai_run", args=[self.project.pk, run.pk]))
+        self.assertContains(response, "data-linkedin-copy")
+        self.assertContains(response, "Existing LinkedIn post")
+        self.assertContains(response, 'rel="noopener noreferrer"')
+        self.assertEqual(AiRun.objects.count(), 1)
+        run.platform = "reddit"
+        run.save()
+        self.assertNotContains(
+            self.client.get(reverse("ai_run", args=[self.project.pk, run.pk])),
+            "data-linkedin-copy",
+        )
+
     def test_landing_and_auth_pages(self):
         self.client.logout()
         for url in ["/", "/docs", "/login", "/register", "/forgot-password"]:
