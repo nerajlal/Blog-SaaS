@@ -1,6 +1,6 @@
 # Laravel → Django: blogsaas.task19.com
 
-Run these commands on the Ubuntu droplet as root, in order. Stop if a command fails. This is a one-time migration; do not rerun the import after users start using Django. Keep the original Laravel MySQL database, `.env`, APP_KEY, uploads, and backups. Do not run Laravel migrations for this cutover.
+Run these commands on the Ubuntu droplet as root, in order. Stop if a command fails. If Django is already serving this site, skip to **Later Django updates** at the end. This is a one-time migration; do not rerun the import after users start using Django. Keep the original Laravel MySQL database, `.env`, APP_KEY, uploads, and backups. Do not run Laravel migrations for this cutover.
 
 ## 1. Back up and put Laravel into maintenance
 
@@ -50,6 +50,12 @@ cp .local/laravel-export.json "$CUTOVER_BACKUP/laravel-export.json"
 
 ## 3. Install Python dependencies
 
+The backup shell uses a private umask. Restore normal permissions before creating the virtual environment so the www-data service can read and execute it:
+
+```bash
+umask 022
+```
+
 On the 512 MB droplet, check `free -h`, `swapon --show`, and `df -h /`. If no swap exists and at least 2 GB disk is free:
 
 ```bash
@@ -66,6 +72,7 @@ Skip these swap commands if swap is already configured.
 apt update
 apt install -y python3-venv python3-dev build-essential pkg-config default-libmysqlclient-dev
 python3 -m venv .venv
+chmod -R a+rX .venv
 .venv/bin/pip install -r requirements.lock
 .venv/bin/pip install 'mysqlclient>=2.2,<3'
 ```
@@ -88,7 +95,8 @@ EXIT;
 ## 5. Configure Django
 
 ```bash
-cp -n .env.django.example .env.django
+if [ ! -e .env.django ]; then cp .env.django.example .env.django; fi
+chmod 600 .env.django
 .venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(64))'
 nano .env.django
 ```
@@ -176,6 +184,7 @@ UNIT
 systemctl daemon-reload
 systemctl enable --now blogsaas-web blogsaas-worker
 systemctl status blogsaas-web blogsaas-worker --no-pager
+sudo -u www-data /var/www/Blog-SaaS/.venv/bin/python manage.py check
 curl -I http://127.0.0.1:8001/login
 ```
 
@@ -227,17 +236,27 @@ Verify existing login, project/story counts, images, editor save, API publishing
 
 Restore the saved Nginx site file from the backup, run nginx -t and reload. Run `php artisan up` using the preserved Laravel checkout/vendor/.env, restore its worker/scheduler services if previously stopped, and stop the two Django services. If Laravel needs its old source, check out the commit recorded in laravel-commit.txt only after preserving Django changes and resolving working-tree changes. Once Django accepts new writes, rollback requires reconciling those records; the old Laravel DB will not contain them.
 
+## Google and sitemap features
+
+The latest release includes editable article slugs, saved font sizes, and Analytics & Search with Search Console, GA4, and Sitemap tabs. Migration 0004 adds Analytics connections and is included by `manage.py migrate` above.
+
+Google reports need OAuth settings and enabled Google APIs. Follow [google-analytics-search.md](google-analytics-search.md). Missing configuration disables Connect with an explanation; it does not block blog publishing. The sitemap API generates current XML on request; the customer must serve/proxy it on their website. Configure and verify its website URL and article route in the Sitemap tab.
+
 ## Later Django updates
 
 After this initial migration, deploy using:
 
 ```bash
 cd /var/www/Blog-SaaS
+git status --short
 git pull --ff-only origin main
+umask 022
 .venv/bin/pip install -r requirements.lock
 .venv/bin/python manage.py migrate
 .venv/bin/python manage.py collectstatic --noinput
 systemctl restart blogsaas-web blogsaas-worker
+systemctl status blogsaas-web blogsaas-worker --no-pager
+curl -I https://blogsaas.task19.com/login
 ```
 
 Do not run composer, npm, Laravel seeders, or the import again for routine Django updates.

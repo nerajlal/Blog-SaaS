@@ -436,6 +436,7 @@ def autosave(request, blog_id):
             raise ValidationError("Autosave payload too large.")
         allowed = [
             "title",
+            "slug",
             "excerpt",
             "status",
             "published_at",
@@ -984,7 +985,7 @@ def verify_domain(request, pk):
         )
     project.seo_verified_at = timezone.now()
     project.save()
-    return redirect("seo_settings", pk=pk)
+    return redirect("analytics_hub", pk=pk, tab="sitemap")
 
 
 @page
@@ -1416,8 +1417,18 @@ def search_console(request, pk, operation=None):
         {
             "project": project,
             "connection": connection,
-            "google_oauth_configured": bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET and settings.GOOGLE_REDIRECT_URI),
-            "google_connect_ready": bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET and settings.GOOGLE_REDIRECT_URI and project.seo_verified_at and project.seo_settings.get("public_url")),
+            "google_oauth_configured": bool(
+                settings.GOOGLE_CLIENT_ID
+                and settings.GOOGLE_CLIENT_SECRET
+                and settings.GOOGLE_REDIRECT_URI
+            ),
+            "google_connect_ready": bool(
+                settings.GOOGLE_CLIENT_ID
+                and settings.GOOGLE_CLIENT_SECRET
+                and settings.GOOGLE_REDIRECT_URI
+                and project.seo_verified_at
+                and project.seo_settings.get("public_url")
+            ),
             "properties": properties,
             "reports": SearchReport.objects.filter(project=project).order_by("-id")[
                 :20
@@ -1439,7 +1450,7 @@ def google_callback(request):
     ):
         raise ValidationError("OAuth request expired or state did not match.")
     project = project_for(request, flow["project"], "manage")
-    if not project.seo_verified_at:
+    if flow.get("service") != "analytics" and not project.seo_verified_at:
         raise ValidationError("Domain verification changed.")
     response = requests.post(
         "https://oauth2.googleapis.com/token",
@@ -1455,6 +1466,18 @@ def google_callback(request):
     )
     response.raise_for_status()
     tokens = response.json()
+    if flow.get("service") == "analytics":
+        from .google_tools import ANALYTICS_SCOPE
+
+        if ANALYTICS_SCOPE not in tokens.get("scope", "").split():
+            raise ValidationError("Required read-only Analytics scope was not granted.")
+        tokens["expires_at"] = timezone.now().timestamp() + tokens.get(
+            "expires_in", 3600
+        )
+        AnalyticsConnection.objects.update_or_create(
+            project=project, defaults={"tokens": tokens, "property": "", "report": {}}
+        )
+        return redirect("analytics_hub", pk=project.pk, tab="analytics")
     if (
         "https://www.googleapis.com/auth/webmasters.readonly"
         not in tokens.get("scope", "").split()

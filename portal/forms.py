@@ -45,6 +45,12 @@ class ProjectForm(forms.ModelForm):
 
 
 class BlogForm(forms.ModelForm):
+    slug = forms.SlugField(
+        required=False,
+        max_length=255,
+        label="Article slug",
+        help_text="Use letters, numbers, hyphens or underscores. Leave blank for an automatic slug. Changing a published slug changes its API URL; update links and redirects on your website.",
+    )
     editor_revision = forms.CharField(required=False, widget=forms.HiddenInput)
     banner_image = forms.ImageField(required=False)
     avatar_image = forms.ImageField(required=False)
@@ -97,6 +103,7 @@ class BlogForm(forms.ModelForm):
         model = Blog
         fields = [
             "title",
+            "slug",
             "category",
             "excerpt",
             "status",
@@ -163,6 +170,12 @@ class BlogForm(forms.ModelForm):
                 if key == "schema_type"
                 else "",
             )
+
+    def clean_slug(self):
+        value = self.cleaned_data.get("slug", "")
+        if not value and self.instance.pk:
+            return Blog.objects.get(pk=self.instance.pk).slug
+        return value
 
     def clean(self):
         data = super().clean()
@@ -240,11 +253,14 @@ class ProfileForm(forms.Form):
 
 class SeoForm(forms.Form):
     public_url = forms.URLField(
-        required=False, label="Your website URL",
+        required=False,
+        label="Your website URL",
         help_text="The website where visitors read your blog, for example https://example.com.",
     )
     blog_path = forms.CharField(
-        initial="/blog/{slug}", max_length=500, label="Article URL path",
+        initial="/blog/{slug}",
+        max_length=500,
+        label="Article URL path",
         help_text="Match your website route, for example /blog/{slug}. Include {slug} exactly once.",
     )
 

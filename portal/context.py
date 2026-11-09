@@ -29,6 +29,8 @@ def navigation(request):
         "seo_settings": "seo",
         "verify_domain": "seo",
         "search": "search",
+        "analytics_hub": "search",
+        "sitemap_download": "search",
         "search_action": "search",
         "search_export": "search",
         "google_callback": "search",

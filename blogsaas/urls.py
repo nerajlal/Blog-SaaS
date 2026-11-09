@@ -4,10 +4,21 @@ from django.contrib import admin
 from django.contrib.auth import views as auth
 from django.urls import path
 from portal import views as v
+from portal import google_tools
 from portal.auth_views import LimitedPasswordResetView
 
 urlpatterns = [
     path("", v.home, name="home"),
+    path(
+        "admin/projects/<int:pk>/search/tools/<str:tab>",
+        google_tools.hub,
+        name="analytics_hub",
+    ),
+    path(
+        "admin/projects/<int:pk>/sitemap.xml",
+        google_tools.sitemap_download,
+        name="sitemap_download",
+    ),
     path("docs", v.home, name="docs"),
     path("admin/docs", v.admin_docs, name="admin_docs"),
     path("login", v.sign_in, name="login"),

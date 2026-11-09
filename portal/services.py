@@ -62,7 +62,27 @@ def clean_html(value):
     return bleach.clean(
         value,
         tags=TAGS,
-        attributes={"a": ["href", "title"], "li": ["data-list"]},
+        attributes={
+            "a": ["href", "title"],
+            "li": ["data-list"],
+            "span": lambda tag, name, value: (
+                name == "class"
+                and bool(value.split())
+                and all(
+                    part
+                    in {
+                        "ql-size-small",
+                        "ql-size-large",
+                        "ql-size-huge",
+                        *{
+                            f"ql-size-{size}px"
+                            for size in (12, 14, 16, 18, 20, 24, 28, 32, 36, 48)
+                        },
+                    }
+                    for part in value.split()
+                )
+            ),
+        },
         protocols=["https", "http", "mailto"],
         strip=True,
     )

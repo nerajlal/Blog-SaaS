@@ -104,6 +104,218 @@ class PortalTests(TestCase):
             reverse("integration", args=[self.project.pk]),
         )
 
+    def test_editor_slug_validation_and_update(self):
+        from .forms import BlogForm
+
+        data = {
+            "title": self.blog.title,
+            "slug": "custom-fragrance-guide",
+            "category": self.category.pk,
+            "status": "draft",
+        }
+        form = BlogForm(data, instance=self.blog, project=self.project)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.slug, "custom-fragrance-guide")
+        other = Blog.objects.create(
+            project=self.project, user=self.owner, title="Other", slug="already-used"
+        )
+        data["slug"] = other.slug
+        form = BlogForm(data, instance=self.blog, project=self.project)
+        self.assertFalse(form.is_valid())
+        self.assertIn("slug", form.errors)
+        data["slug"] = "invalid/path"
+        form = BlogForm(data, instance=self.blog, project=self.project)
+        self.assertFalse(form.is_valid())
+        self.assertIn("slug", form.errors)
+        data["slug"] = ""
+        form = BlogForm(data, instance=self.blog, project=self.project)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["slug"], "custom-fragrance-guide")
+
+    def test_editor_font_sizes_survive_sanitization(self):
+        markup = '<p><span class="ql-size-large" onclick="alert(1)">Large text</span><span class="unknown">Other</span></p>'
+        cleaned = clean_html(markup)
+        self.assertIn('class="ql-size-large"', cleaned)
+        self.assertNotIn("onclick", cleaned)
+        self.assertNotIn('class="unknown"', cleaned)
+        self.assertIn(
+            'class="ql-size-24px"',
+            clean_html('<span class="ql-size-24px">Sized</span>'),
+        )
+        self.assertNotIn(
+            "class=", clean_html('<span class="ql-size-999px">Invalid</span>')
+        )
+
+    def test_google_hub_tabs_and_route_actions(self):
+        for tab in ("analytics", "sitemap"):
+            self.assertEqual(
+                self.client.get(
+                    reverse("analytics_hub", args=[self.project.pk, tab])
+                ).status_code,
+                200,
+            )
+        self.assertEqual(
+            self.client.get(
+                reverse("search_action", args=[self.project.pk, "connect"])
+            ).resolver_match.url_name,
+            "search_action",
+        )
+        with override_settings(
+            GOOGLE_CLIENT_ID="", GOOGLE_CLIENT_SECRET="", GOOGLE_REDIRECT_URI=""
+        ):
+            self.assertContains(
+                self.client.get(
+                    reverse("analytics_hub", args=[self.project.pk, "analytics"])
+                ),
+                "disabled",
+            )
+
+    @override_settings(
+        GOOGLE_CLIENT_ID="client",
+        GOOGLE_CLIENT_SECRET="secret",
+        GOOGLE_REDIRECT_URI="http://localhost/callback",
+    )
+    def test_analytics_oauth_state_scope_and_callback(self):
+        url = reverse("analytics_hub", args=[self.project.pk, "analytics"])
+        response = self.client.post(url, {"operation": "connect"})
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("analytics.readonly", response.url)
+        flow = self.client.session["google_oauth"]
+        self.assertEqual(flow["service"], "analytics")
+        self.assertEqual(
+            self.client.get(
+                reverse("google_callback"), {"state": "invalid", "code": "fake"}
+            ).status_code,
+            400,
+        )
+        self.client.post(url, {"operation": "connect"})
+        flow = self.client.session["google_oauth"]
+        response_mock = Mock()
+        response_mock.json.return_value = {
+            "scope": "https://www.googleapis.com/auth/analytics.readonly",
+            "access_token": "fake",
+            "refresh_token": "fake-refresh",
+        }
+        with patch("portal.views.requests.post", return_value=response_mock):
+            response = self.client.get(
+                reverse("google_callback"), {"state": flow["state"], "code": "fake"}
+            )
+        self.assertRedirects(response, url)
+        self.assertTrue(
+            AnalyticsConnection.objects.filter(project=self.project).exists()
+        )
+        self.assertFalse(SearchConnection.objects.filter(project=self.project).exists())
+
+    def test_analytics_property_selection_reporting_and_disconnect(self):
+        conn = AnalyticsConnection.objects.create(
+            project=self.project, tokens={"access_token": "fake"}
+        )
+        url = reverse("analytics_hub", args=[self.project.pk, "analytics"])
+        properties = {
+            "accountSummaries": [
+                {
+                    "propertySummaries": [
+                        {"property": "properties/123", "displayName": "Store"}
+                    ]
+                }
+            ]
+        }
+        with patch("portal.google_tools.google_request", return_value=properties):
+            self.assertEqual(
+                self.client.post(
+                    url, {"operation": "select", "property": "properties/999"}
+                ).status_code,
+                400,
+            )
+            self.assertEqual(
+                self.client.post(
+                    url, {"operation": "select", "property": "properties/123"}
+                ).status_code,
+                200,
+            )
+        dates = {
+            "operation": "report",
+            "start_date": str(timezone.localdate() - timedelta(days=7)),
+            "end_date": str(timezone.localdate() - timedelta(days=1)),
+        }
+        with patch(
+            "portal.google_tools.google_request",
+            side_effect=[
+                {
+                    "rows": [
+                        {
+                            "dimensionValues": [{"value": "/blog/test"}],
+                            "metricValues": [
+                                {"value": "4"},
+                                {"value": "5"},
+                                {"value": "6"},
+                                {"value": "0.5"},
+                            ],
+                        }
+                    ]
+                },
+                {"rows": []},
+            ],
+        ) as google:
+            self.assertContains(self.client.post(url, dates), "/blog/test")
+            self.assertEqual(google.call_count, 2)
+        conn.refresh_from_db()
+        self.assertEqual(conn.report["rows"][0]["metrics"][2], "6")
+        self.assertEqual(
+            self.client.post(
+                url, {**dates, "end_date": str(timezone.localdate())}
+            ).status_code,
+            400,
+        )
+        self.client.post(url, {"operation": "disconnect"})
+        self.assertFalse(AnalyticsConnection.objects.filter(pk=conn.pk).exists())
+
+    def test_sitemap_setup_preserves_defaults_and_requires_verification(self):
+        self.project.seo_settings = {
+            "site_name": "Keep",
+            "public_url": "https://old.example.com",
+        }
+        self.project.seo_verified_at = timezone.now()
+        self.project.save()
+        SearchConnection.objects.create(
+            project=self.project, origin="https://old.example.com"
+        )
+        url = reverse("analytics_hub", args=[self.project.pk, "sitemap"])
+        self.assertEqual(
+            self.client.post(
+                url,
+                {"public_url": "https://example.com", "blog_path": "/articles/{slug}"},
+            ).status_code,
+            302,
+        )
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.seo_settings["site_name"], "Keep")
+        self.assertIsNone(self.project.seo_verified_at)
+        self.assertFalse(SearchConnection.objects.filter(project=self.project).exists())
+        self.assertEqual(
+            self.client.get(
+                reverse("sitemap_download", args=[self.project.pk])
+            ).status_code,
+            409,
+        )
+        self.project.seo_verified_at = timezone.now()
+        self.project.save()
+        self.blog.status, self.blog.published_at = (
+            "published",
+            timezone.now() - timedelta(days=1),
+        )
+        self.blog.save()
+        response = self.client.get(reverse("sitemap_download", args=[self.project.pk]))
+        self.assertContains(response, "https://example.com/articles/" + self.blog.slug)
+        self.blog.seo_settings = {"robots_index": "noindex"}
+        self.blog.save()
+        self.assertNotContains(
+            self.client.get(reverse("sitemap_download", args=[self.project.pk])),
+            self.blog.slug,
+        )
+
     def test_landing_and_auth_pages(self):
         self.client.logout()
         for url in ["/", "/docs", "/login", "/register", "/forgot-password"]:

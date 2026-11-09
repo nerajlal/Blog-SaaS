@@ -1,6 +1,6 @@
 # Sidebar menus and their uses
 
-This describes the current Django application on the `python` branch. URLs below use `{project_id}` for the selected project's ID, for example `1`.
+This describes the current Django application on the `main` branch. URLs below use `{project_id}` for the selected project's ID, for example `1`.
 
 ## Main menus
 
@@ -10,8 +10,8 @@ This describes the current Django application on the `python` branch. URLs below
 | **Blogs** | View the selected project's stories and categories. Create/edit stories, save drafts, publish or schedule, move stories, and open their social versions using the platform logos. | `/admin/projects/{project_id}` | Members can view. Owners, admins, and editors can write and manage stories/categories. |
 | **Content health** | Review local SEO/readability checks, word count, missing metadata, and image alternatives. Analyze all project stories, open individual reports, mark content reviewed, or prepare AI SEO suggestions for review. | `/admin/projects/{project_id}/seo/health` | Members can view. Owners, admins, and editors can analyze and record reviews. |
 | **Links & URLs** | View detected links, identify published stories without detected incoming links, rebuild the link graph, and queue public link checks. Individual story screens offer related-reading suggestions with explicit insertion and guarded undo. | `/admin/projects/{project_id}/links` | Members can view. Owners, admins, and editors can run link actions. |
-| **Search performance** | Connect Google Search Console with read-only OAuth, select a matching property, queue search-performance reports and URL inspections, and export completed performance data. | `/admin/projects/{project_id}/search` | Owners/admins. |
-| **API & Docs** | Open the public developer section explaining the content API and integration approach. The project's actual API key and project-specific setup instructions are available through its Integration button. | `/admin/docs` | Public information; the sidebar link appears for signed-in users. |
+| **Analytics & Search** | Three tabs: Search Console reports/inspection, Google Analytics 4 top pages and traffic sources, and website URL setup, verification, and sitemap XML generation. | `/admin/projects/{project_id}/search` | Owners/admins. |
+| **API & Docs** | Open the admin developer page explaining the content API and integration approach. The project's actual API key and project-specific setup instructions are available through its Integration button. | `/admin/docs` | Signed-in users. |
 
 ## Workspace and account controls
 
@@ -35,7 +35,7 @@ This describes the current Django application on the `python` branch. URLs below
 ## Visibility and behavior
 
 - Projects and API & Docs are general navigation. Project-specific menus appear after opening a project-related page.
-- Search performance appears only for users with project-management permission.
+- Analytics & Search appears only for users with project-management permission.
 - The selected menu stays highlighted. Related screens keep their parent selected: story editing and AI/social screens select Blogs; an individual SEO report selects Content health; story link suggestions select Links & URLs.
 - Legacy projects without a workspace are accessible only to their direct owner.
 - Content-health scores are local editorial guidance, not Google ranking scores or factual-quality guarantees. Missing-image checks are not applicable when no image is attached.
@@ -45,3 +45,5 @@ This describes the current Django application on the `python` branch. URLs below
 Project details opens through **Tell AI about your project** on the project page. It is no longer listed in the sidebar.
 
 Integration contains API credentials and setup guidance. The separate website URL/path settings page has been retired; existing links redirect to Integration. Per-article SEO stays in the story editor.
+
+Analytics & Search keeps the website URL and article path only for sitemap and domain-based tools. Basic content API integration does not require this setup.
