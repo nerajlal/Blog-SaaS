@@ -260,3 +260,29 @@ curl -I https://blogsaas.task19.com/login
 ```
 
 Do not run composer, npm, Laravel seeders, or the import again for routine Django updates.
+
+## Recovery: MySQL error 1071 during the initial migration
+
+Versions before the MySQL index fix attempted to index full 1,000-character URL paths. With utf8mb4 these exceed MySQL's 3,072-byte index limit. The corrected schema indexes SHA-256 hashes and keeps full paths. Migration 0005 also upgrades existing Django databases.
+
+If portal.0001_initial failed, MySQL can leave partially created tables. Do not fake the migration or run import against this partial schema. Preserve it and create a fresh destination instead:
+
+```bash
+cd /var/www/Blog-SaaS
+git pull --ff-only origin main
+mysql
+```
+
+```sql
+CREATE DATABASE blog_saas_django_v2 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON blog_saas_django_v2.* TO 'blog_saas_django'@'localhost';
+EXIT;
+```
+
+Change only DJANGO_DB_NAME to blog_saas_django_v2 in `.env.django`. Keep the existing working database username/password and stable Django secret. Then:
+
+```bash
+.venv/bin/python manage.py migrate
+```
+
+Proceed to the import only once every migration succeeds. This preserves the original Laravel database and the partial first Django database. If the v2 database already exists, inspect it rather than recreating or dropping it.

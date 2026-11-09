@@ -316,6 +316,31 @@ class PortalTests(TestCase):
             self.blog.slug,
         )
 
+    def test_long_paths_use_bounded_unique_hash_indexes(self):
+        from django.db import IntegrityError, transaction
+
+        long_path = "/" + "a" * 950
+        redirect = RedirectRule.objects.create(
+            project=self.project, source_path=long_path, target_path="/new"
+        )
+        self.assertEqual(len(redirect.source_hash), 64)
+        self.assertEqual(redirect.source_path, long_path)
+        event, created = NotFoundEvent.objects.get_or_create(
+            project=self.project, path=long_path
+        )
+        self.assertTrue(created)
+        self.assertEqual(len(event.path_hash), 64)
+        for model, values in [
+            (RedirectRule, {"source_path": long_path, "target_path": "/other"}),
+            (NotFoundEvent, {"path": long_path}),
+        ]:
+            with self.assertRaises(IntegrityError), transaction.atomic():
+                model.objects.create(project=self.project, **values)
+        redirect.source_path = "/changed"
+        redirect.save(update_fields=["source_path"])
+        redirect.refresh_from_db()
+        self.assertEqual(redirect.source_hash, hashlib.sha256(b"/changed").hexdigest())
+
     def test_landing_and_auth_pages(self):
         self.client.logout()
         for url in ["/", "/docs", "/login", "/register", "/forgot-password"]:

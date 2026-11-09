@@ -629,6 +629,7 @@ class Migration(migrations.Migration):
                 ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("source_path", models.CharField(max_length=1000)),
+                ("source_hash", models.CharField(max_length=64, editable=False)),
                 ("target_path", models.CharField(max_length=1000)),
                 ("status_code", models.PositiveSmallIntegerField(default=301)),
                 ("enabled", models.BooleanField(default=True)),
@@ -1012,6 +1013,7 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("path", models.CharField(max_length=1000)),
+                ("path_hash", models.CharField(max_length=64, editable=False)),
                 ("day", models.DateField(default=django.utils.timezone.localdate)),
                 ("hits", models.PositiveIntegerField(default=1)),
                 ("last_seen", models.DateTimeField(default=django.utils.timezone.now)),
@@ -1025,7 +1027,8 @@ class Migration(migrations.Migration):
             options={
                 "constraints": [
                     models.UniqueConstraint(
-                        fields=("project", "path", "day"), name="unique_404_day"
+                        fields=("project", "path_hash", "day"),
+                        name="unique_404_day_hash",
                     )
                 ],
             },
@@ -1052,7 +1055,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="redirectrule",
             constraint=models.UniqueConstraint(
-                fields=("project", "source_path"), name="unique_redirect"
+                fields=("project", "source_hash"), name="unique_redirect_hash"
             ),
         ),
         migrations.AddConstraint(

@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 import uuid
 from django.contrib.auth.models import AbstractUser
@@ -228,6 +229,7 @@ class LinkEdit(Timestamped):
 class RedirectRule(Timestamped):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     source_path = models.CharField(max_length=1000)
+    source_hash = models.CharField(max_length=64, editable=False)
     target_path = models.CharField(max_length=1000)
     status_code = models.PositiveSmallIntegerField(default=301)
     enabled = models.BooleanField(default=True)
@@ -235,9 +237,15 @@ class RedirectRule(Timestamped):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["project", "source_path"], name="unique_redirect"
+                fields=["project", "source_hash"], name="unique_redirect_hash"
             )
         ]
+
+    def save(self, *args, **kwargs):
+        self.source_hash = hashlib.sha256(self.source_path.encode("utf-8")).hexdigest()
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = set(kwargs["update_fields"]) | {"source_hash"}
+        super().save(*args, **kwargs)
 
 
 class ChangeBatch(Timestamped):
@@ -254,6 +262,7 @@ class ChangeBatch(Timestamped):
 class NotFoundEvent(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     path = models.CharField(max_length=1000)
+    path_hash = models.CharField(max_length=64, editable=False)
     day = models.DateField(default=timezone.localdate)
     hits = models.PositiveIntegerField(default=1)
     last_seen = models.DateTimeField(default=timezone.now)
@@ -261,9 +270,15 @@ class NotFoundEvent(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["project", "path", "day"], name="unique_404_day"
+                fields=["project", "path_hash", "day"], name="unique_404_day_hash"
             )
         ]
+
+    def save(self, *args, **kwargs):
+        self.path_hash = hashlib.sha256(self.path.encode("utf-8")).hexdigest()
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = set(kwargs["update_fields"]) | {"path_hash"}
+        super().save(*args, **kwargs)
 
 
 class TelemetryReceipt(models.Model):
