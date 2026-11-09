@@ -7,3 +7,52 @@
 @media(max-width:767px){.workflow-grid{grid-template-columns:minmax(0,1fr)}}
 .feature-card{min-width:0}.feature-art{min-width:0}
 @media(max-width:549px){.feature-grid{grid-template-columns:minmax(0,1fr)}.art-analytics{padding-inline:40px}.art-usage{gap:8px}}
+
+/* Keep the FAQ introduction beside the questions as the reader scrolls. */
+.faq-section{max-width:1152px;display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:90px;align-items:start}
+.faq-heading{position:sticky;top:100px;text-align:left;margin-bottom:0}
+.faq-heading h2{max-width:12ch}
+.faq-section .faq-list{min-width:0}
+.faq-section .faq-list details:first-child{padding-top:0}
+@media(max-width:1000px){.faq-section{gap:40px}}
+@media(max-width:767px){.faq-section{grid-template-columns:minmax(0,1fr);gap:30px}.faq-heading{position:static}.faq-heading h2{max-width:none}}
+
+/* Short illustration sequences play as each feature comes into view. */
+@media(prefers-reduced-motion:no-preference){
+ .hero-landscape svg{animation:landscape-arrive 1.7s cubic-bezier(.2,.7,.3,1) both}
+ .hero-content>*{animation:hero-arrive .7s ease-out backwards}
+ .hero-content h1{animation-delay:.08s}.hero-description{animation-delay:.16s}.button-row{animation-delay:.24s}.hero-notes{animation-delay:.32s}
+ .feature-card .feature-art>*{transform-origin:center bottom}
+ .motion-visible .art-analytics i{animation:bar-arrive 1.6s cubic-bezier(.2,.7,.3,1) both}
+ .motion-visible .art-analytics i:nth-child(2){animation-delay:.1s}.motion-visible .art-analytics i:nth-child(3){animation-delay:.2s}.motion-visible .art-analytics i:nth-child(4){animation-delay:.3s}.motion-visible .art-analytics i:nth-child(5){animation-delay:.4s}.motion-visible .art-analytics i:nth-child(6){animation-delay:.5s}
+ .motion-visible .art-social>span,.motion-visible .art-team>span{animation:icon-arrive .65s ease-out backwards}
+ .motion-visible .art-social>span:nth-child(2),.motion-visible .art-team>span:nth-child(2){animation-delay:.12s}.motion-visible .art-social>span:nth-child(3),.motion-visible .art-team>span:nth-child(3){animation-delay:.24s}.motion-visible .art-social>span:nth-child(4),.motion-visible .art-team>span:nth-child(4){animation-delay:.36s}
+ .motion-visible .art-health>span{animation:check-arrive .7s ease-out backwards}.motion-visible .art-health>span:nth-child(2){animation-delay:.2s}.motion-visible .art-health>span:nth-child(3){animation-delay:.4s}
+ .motion-visible .mini-line{transform-origin:left;animation:line-arrive 1s ease-out backwards}.motion-visible .mini-line.short{animation-delay:.2s}
+ .motion-visible .art-links>b,.motion-visible .art-sitemap>span{animation:link-travel 1.8s ease-in-out}
+ .motion-visible .mini-calendar,.motion-visible .art-usage>span{animation:icon-arrive .8s ease-out backwards}
+ .motion-visible.context-card .approved{animation:check-arrive .8s .4s ease-out backwards}
+ .art-writing>strong{transition:color .2s,background .2s,transform .2s;border-radius:4px;padding:2px 5px}
+ .feature-card:hover .art-writing>strong{color:#3975ed;background:#e4ecff;transform:scale(1.1)}
+ .button:hover{box-shadow:0 5px 15px #3975ed1c}.button.primary:hover{box-shadow:0 2px 0 #2258c5,0 0 0 3px #fff inset,0 5px 15px #3975ed1c}
+ .motion-paused *,.motion-paused *:before,.motion-paused *:after{animation-play-state:paused!important}
+}
+@keyframes hero-arrive{from{opacity:0;translate:0 12px}to{opacity:1;translate:0 0}}
+@keyframes landscape-arrive{from{opacity:.4;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bar-arrive{from{transform:scaleY(.12);opacity:.35}to{transform:scaleY(1);opacity:1}}
+@keyframes icon-arrive{from{opacity:0;transform:translateY(9px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes check-arrive{from{opacity:0;translate:-8px 0}to{opacity:1;translate:0 0}}
+@keyframes line-arrive{from{transform:scaleX(.15);opacity:.3}to{transform:scaleX(1);opacity:1}}
+@keyframes link-travel{0%,100%{transform:translateY(0);opacity:1}35%{transform:translateY(-3px);opacity:.4}70%{transform:translateY(2px);opacity:.9}}
+/* Keep navigation available without covering the page's initial content. */
+body{padding-top:75px}
+.site-header{position:fixed;top:18px;left:50%;transform:translateX(-50%);margin-top:0;z-index:40;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 5px 22px #263b5210}
+@media(max-width:767px){body{padding-top:65px}.site-header{top:12px;margin-top:0}}
+
+.customer-benefits h2{font-size:27px;letter-spacing:-1px;margin:20px 0 30px}
+.customer-benefits .benefit-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:35px;margin:25px 0 28px}
+.benefit-items>div{display:flex;flex-direction:column;align-items:center;gap:8px}
+.benefit-items .benefit-symbol{font-size:23px;color:#7b9bc6;line-height:1.5}
+.benefit-items strong{font-size:14px;font-weight:550;letter-spacing:-.25px;color:#536171}
+.benefit-items small{font-size:11px;letter-spacing:0;font-weight:400;color:#8d98a4}
+@media(max-width:767px){.customer-benefits h2{font-size:24px}.customer-benefits .benefit-items{grid-template-columns:minmax(0,1fr);gap:25px}.benefit-items strong{font-size:14px}.benefit-items small{font-size:11px}}
