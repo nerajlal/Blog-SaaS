@@ -76,13 +76,13 @@ class PortalTests(TestCase):
         self.profile()
         routes = [
             ("projects", {}),
+            ("admin_docs", {}),
             ("project", {"pk": self.project.pk}),
             ("integration", {"pk": self.project.pk}),
             ("create_blog", {"pk": self.project.pk}),
             ("edit_blog", {"blog_id": self.blog.pk}),
             ("profile", {"pk": self.project.pk}),
             ("studio", {"pk": self.project.pk}),
-            ("seo_settings", {"pk": self.project.pk}),
             ("health", {"pk": self.project.pk}),
             ("report", {"blog_id": self.blog.pk}),
             ("links", {"pk": self.project.pk}),
@@ -97,6 +97,12 @@ class PortalTests(TestCase):
                 self.assertEqual(
                     self.client.get(reverse(name, kwargs=kwargs)).status_code, 200
                 )
+
+    def test_retired_seo_settings_redirects_to_integration(self):
+        self.assertRedirects(
+            self.client.get(reverse("seo_settings", args=[self.project.pk])),
+            reverse("integration", args=[self.project.pk]),
+        )
 
     def test_landing_and_auth_pages(self):
         self.client.logout()

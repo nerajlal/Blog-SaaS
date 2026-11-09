@@ -36,6 +36,7 @@ def navigation(request):
         "redirects": "redirects",
         "telemetry": "telemetry",
         "docs": "docs",
+        "admin_docs": "docs",
     }
     active = groups.get(route, "projects")
     if route in ["batches", "batch_operation", "batch_action"]:

@@ -239,22 +239,14 @@ class ProfileForm(forms.Form):
 
 
 class SeoForm(forms.Form):
-    site_name = forms.CharField(required=False, max_length=255)
-    locale = forms.CharField(required=False, max_length=20, initial="en")
-    follow = forms.BooleanField(required=False, initial=True)
-    media_url = forms.URLField(required=False)
-    social_image_url = forms.URLField(required=False)
-    publisher_type = forms.ChoiceField(
-        choices=[("Organization", "Organization"), ("Person", "Person")], required=False
+    public_url = forms.URLField(
+        required=False, label="Your website URL",
+        help_text="The website where visitors read your blog, for example https://example.com.",
     )
-    publisher_name = forms.CharField(required=False, max_length=255)
-    publisher_logo_url = forms.URLField(required=False)
-    public_url = forms.URLField(required=False, label="Public website URL")
-    blog_path = forms.CharField(initial="/blog/{slug}", max_length=500)
-    title_template = forms.CharField(required=False, max_length=255)
-    description = forms.CharField(required=False, max_length=500, widget=forms.Textarea)
-    index = forms.BooleanField(required=False, initial=True)
-    social_image = forms.URLField(required=False)
+    blog_path = forms.CharField(
+        initial="/blog/{slug}", max_length=500, label="Article URL path",
+        help_text="Match your website route, for example /blog/{slug}. Include {slug} exactly once.",
+    )
 
     def clean_blog_path(self):
         from .services import rooted_path

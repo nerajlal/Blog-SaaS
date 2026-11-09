@@ -1,0 +1,1 @@
+<form method="post" action="{% url 'seo_settings' project.pk %}" class="form-stack">{% csrf_token %}{{ form.as_p }}<button class="button">Save website settings</button></form>

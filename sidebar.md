@@ -8,15 +8,10 @@ This describes the current Django application on the `python` branch. URLs below
 | --- | --- | --- | --- |
 | **Projects** | View projects in the active workspace, see story totals, create a project, open its blogs or integration instructions, and delete projects when permitted. | `/admin/projects` | Workspace members can view. Owners, admins, and editors can create; owners/admins can delete. |
 | **Blogs** | View the selected project's stories and categories. Create/edit stories, save drafts, publish or schedule, move stories, and open their social versions using the platform logos. | `/admin/projects/{project_id}` | Members can view. Owners, admins, and editors can write and manage stories/categories. |
-| **Project details** | Describe the business, website, products/services, audience, brand voice, approved facts, and content boundaries. Save and approve the profile used by AI. Configure the workspace AI allowance. | `/admin/projects/{project_id}/details` | Members can view. Owners/admins manage details, approval, and the shared AI allowance. |
 | **Content health** | Review local SEO/readability checks, word count, missing metadata, and image alternatives. Analyze all project stories, open individual reports, mark content reviewed, or prepare AI SEO suggestions for review. | `/admin/projects/{project_id}/seo/health` | Members can view. Owners, admins, and editors can analyze and record reviews. |
 | **Links & URLs** | View detected links, identify published stories without detected incoming links, rebuild the link graph, and queue public link checks. Individual story screens offer related-reading suggestions with explicit insertion and guarded undo. | `/admin/projects/{project_id}/links` | Members can view. Owners, admins, and editors can run link actions. |
-| **SEO settings** | Set project-wide SEO defaults: public website URL, article URL pattern, title template, description, indexing/follow settings, social image, locale, and publisher details. Verify the public domain through a DNS TXT record. | `/admin/projects/{project_id}/seo` | Owners/admins. |
 | **Search performance** | Connect Google Search Console with read-only OAuth, select a matching property, queue search-performance reports and URL inspections, and export completed performance data. | `/admin/projects/{project_id}/search` | Owners/admins. |
-| **Metadata CSV** | Export story SEO metadata, edit it in a spreadsheet, upload a CSV to preview changes, and explicitly apply or undo a reviewed batch. Guards stop changes from overwriting newer metadata. | `/admin/projects/{project_id}/tools/metadata` | Owners/admins. |
-| **Redirects** | Export/import redirect rules, preview changes or removal, and apply or undo reviewed batches. Invalid paths, cycles, and excessive chains are rejected. The public website must consume the redirect lookup API for visitors to be redirected. | `/admin/projects/{project_id}/tools/redirects` | Owners/admins. |
-| **404 reports** | View missing-page events reported by the public website and generate/rotate its server-only telemetry secret. Events are deduplicated; reporting requires the verified public origin. | `/admin/projects/{project_id}/not-found` | Owners/admins. |
-| **API & Docs** | Open the public developer section explaining the content API and integration approach. The project's actual API key and project-specific setup instructions are available through its Integration button. | `/docs#developers` | Public information; the sidebar link appears for signed-in users. |
+| **API & Docs** | Open the public developer section explaining the content API and integration approach. The project's actual API key and project-specific setup instructions are available through its Integration button. | `/admin/docs` | Public information; the sidebar link appears for signed-in users. |
 
 ## Workspace and account controls
 
@@ -40,9 +35,13 @@ This describes the current Django application on the `python` branch. URLs below
 ## Visibility and behavior
 
 - Projects and API & Docs are general navigation. Project-specific menus appear after opening a project-related page.
-- SEO settings, Search performance, Metadata CSV, Redirects, and 404 reports appear only for users with project-management permission.
+- Search performance appears only for users with project-management permission.
 - The selected menu stays highlighted. Related screens keep their parent selected: story editing and AI/social screens select Blogs; an individual SEO report selects Content health; story link suggestions select Links & URLs.
 - Legacy projects without a workspace are accessible only to their direct owner.
 - Content-health scores are local editorial guidance, not Google ranking scores or factual-quality guarantees. Missing-image checks are not applicable when no image is attached.
 - Claude requires server configuration, an approved project profile, enabled workspace usage, and a running worker. Search Console requires separate Google configuration and domain verification.
 - AI generation, whole-project analysis, link tasks, and Search Console jobs need the background worker. For local development, `python manage.py runlocal` starts the web server and worker together. See [run.md](run.md).
+
+Project details opens through **Tell AI about your project** on the project page. It is no longer listed in the sidebar.
+
+Integration contains API credentials and setup guidance. The separate website URL/path settings page has been retired; existing links redirect to Integration. Per-article SEO stays in the story editor.

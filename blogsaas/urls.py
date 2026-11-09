@@ -9,6 +9,7 @@ from portal.auth_views import LimitedPasswordResetView
 urlpatterns = [
     path("", v.home, name="home"),
     path("docs", v.home, name="docs"),
+    path("admin/docs", v.admin_docs, name="admin_docs"),
     path("login", v.sign_in, name="login"),
     path("register", v.register, name="register"),
     path("logout", v.sign_out, name="logout"),

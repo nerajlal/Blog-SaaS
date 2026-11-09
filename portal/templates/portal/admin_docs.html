@@ -1,0 +1,14 @@
+{% extends 'portal/base.html' %}
+{% block heading %}API & Docs{% endblock %}
+{% block content %}
+<section class="hero-row"><div><span class="eyebrow">Build with your content</span><h1>API & Docs</h1><p class="muted">Display your published stories on your own website.</p></div></section>
+<section class="panel"><h2>1. Get your project API key</h2><p>Open Projects, choose a project, then open Integration. Each project has its own read-only API key.</p><a class="button light" href="{% url 'projects' %}">Open projects ↗</a><p>Keep the key in your website server’s environment and fetch content from your backend. This key never grants access to private drafts or editing.</p></section>
+<section class="panel"><h2>2. Fetch published stories</h2><p>Send the project key in the <code>X-API-KEY</code> header.</p><pre>const response = await fetch("{{ request.scheme }}://{{ request.get_host }}/api/v1/projects/blogs?page=1&amp;per_page=20", {
+  headers: { "X-API-KEY": process.env.BLOGSAAS_API_KEY }
+});
+if (!response.ok) throw new Error("Unable to load stories");
+const data = await response.json();
+// data.blogs contains articles; data.meta contains pagination.</pre><p>This example runs on your JavaScript server. Only published articles whose publication time has arrived are returned.</p><div class="table-scroll"><table><thead><tr><th>Request</th><th>Purpose</th></tr></thead><tbody><tr><td><code>GET /api/v1/projects/blogs</code></td><td>List published stories. Use page and per_page (1–100).</td></tr><tr><td><code>GET /api/v1/projects/blogs/{slug}</code></td><td>Fetch one published article using its slug. Returns a blog object.</td></tr></tbody></table></div></section>
+<section class="panel"><h2>3. Render on your website</h2><p>Create your own listing and article routes, such as /blog and /blog/{slug}. Render the returned article content and sections using your frontend’s safe rendering tools. Prefix relative media URLs with this API server’s origin.</p><p>Use the returned SEO fields for page titles, descriptions, and social previews where available. Your website controls the final HTML, canonical URLs, indexing, and sitemap.</p></section>
+<section class="panel"><h2>Troubleshooting</h2><ul><li>401: check the project API key and X-API-KEY header.</li><li>404 for a story: check its slug, project, and publication status.</li><li>Empty list: publish a story and check its scheduled publication time.</li><li>400: check pagination values and request limits. Cache responses on your website to reduce repeated API calls.</li></ul></section>
+{% endblock %}

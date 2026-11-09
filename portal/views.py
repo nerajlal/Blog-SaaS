@@ -55,6 +55,11 @@ def page(view):
     return wrapped
 
 
+@page
+def admin_docs(request):
+    return render(request, "portal/admin_docs.html")
+
+
 def home(request):
     if request.user.is_authenticated and request.path == "/":
         return redirect("projects")
@@ -217,6 +222,7 @@ def project_detail(request, pk, integration=False):
         {
             "project": project,
             "integration": integration,
+            "has_ai_details": project.ai_versions.exists(),
             "movable_projects": Project.objects.filter(
                 Q(workspace__memberships__user=request.user)
                 | Q(workspace__isnull=True, user=request.user)
@@ -950,33 +956,8 @@ def ai_run(request, pk, run_id, action=None):
 @page
 @require_http_methods(["GET", "POST"])
 def seo_settings(request, pk):
-    project = project_for(request, pk, "manage")
-    form = SeoForm(
-        request.POST or None,
-        initial={
-            **project.seo_settings,
-            "blog_path": project.seo_settings.get(
-                "article_path", project.seo_settings.get("blog_path", "/blog/{slug}")
-            ),
-            "index": project.seo_settings.get("index", True),
-        },
-    )
-    if request.method == "POST" and form.is_valid():
-        data = form.cleaned_data
-        if data["public_url"]:
-            data["public_url"] = origin(data["public_url"])
-        if data.get("public_url") != project.seo_settings.get("public_url"):
-            project.seo_verified_at = None
-            project.seo_domain_token = token()
-            SearchConnection.objects.filter(project=project).delete()
-        data["article_path"] = data["blog_path"]
-        project.seo_settings = {**project.seo_settings, **data}
-        project.save()
-        messages.success(request, "SEO defaults saved.")
-        return redirect("seo_settings", pk=pk)
-    return render(
-        request, "portal/seo_settings.html", {"project": project, "form": form}
-    )
+    project_for(request, pk, "manage")
+    return redirect("integration", pk=pk)
 
 
 @page
@@ -1435,6 +1416,8 @@ def search_console(request, pk, operation=None):
         {
             "project": project,
             "connection": connection,
+            "google_oauth_configured": bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET and settings.GOOGLE_REDIRECT_URI),
+            "google_connect_ready": bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET and settings.GOOGLE_REDIRECT_URI and project.seo_verified_at and project.seo_settings.get("public_url")),
             "properties": properties,
             "reports": SearchReport.objects.filter(project=project).order_by("-id")[
                 :20
