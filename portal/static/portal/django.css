@@ -79,3 +79,13 @@
 .workspace-app .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="48px"]::before, .workspace-app .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="48px"]::before { content: "48 px"; }
 .workspace-app .ql-snow .ql-picker.ql-size .ql-picker-options { max-height: 280px; overflow-y: auto; }
 .workspace-app .ql-snow .ql-picker.ql-size .ql-picker-item { font-size: 14px; }
+
+.linkedin-preview-panel{min-width:0}.linkedin-preview-panel>.hero-row{margin-bottom:10px;gap:10px}.linkedin-preview-panel>.hero-row h3{margin:0}.linkedin-preview-panel>p{font-size:12px;line-height:1.7}
+.linkedin-preview{border:1px solid #dce2e7;border-radius:9px;background:white;overflow:hidden;color:#26313b}
+.linkedin-preview-header{padding:18px;display:flex;gap:10px;align-items:center}
+.linkedin-preview-avatar{display:grid;place-items:center;width:42px;height:42px;flex-shrink:0;border-radius:50%;background:#e8eef7;color:#547293;font-weight:600;font-size:19px}
+.linkedin-preview-header strong{font-size:13px;display:block}.linkedin-preview-header small{display:block;color:#7d8994;font-size:10px;line-height:1.6}.linkedin-preview-menu{margin-left:auto;color:#657787}
+.linkedin-preview-copy{margin:0 18px;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.8 Inter,sans-serif;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:7;overflow:hidden}
+.linkedin-preview-copy.is-expanded{display:block}.linkedin-expand{margin:8px 18px 17px;font-size:11px;color:#6b7884}
+.linkedin-preview-article{background:#f2f5f7;border-top:1px solid #e4e8ed}.linkedin-preview-article img{display:block;width:100%;max-height:220px;object-fit:cover}.linkedin-preview-article>div{padding:14px 18px}.linkedin-preview-article small{display:block;overflow-wrap:anywhere;font-size:10px;color:#7a8897}.linkedin-preview-article strong{display:block;font-size:13px;line-height:1.5;margin-top:5px}
+.linkedin-preview-footer{display:flex;justify-content:space-around;gap:8px;padding:14px 10px;border-top:1px solid #e7ebef;font-size:10px;color:#6d7c8a}.linkedin-preview-note{font-size:10px!important;color:#8a96a3;margin:12px 0}

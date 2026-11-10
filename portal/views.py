@@ -936,6 +936,15 @@ def ai_run(request, pk, run_id, action=None):
             else:
                 raise Http404
         return redirect("ai_run", pk=pk, run_id=run.pk)
+    social_values = run.edited or run.result
+    social_body = social_values.get("body", "").strip()
+    social_tags = social_values.get("hashtags", "").strip()
+    linkedin_text = social_body + (
+        "\n\n" + social_tags if social_tags and social_tags not in social_body else ""
+    )
+    preview_url = ""
+    if run.blog_id and project.blogs.live().filter(pk=run.blog_id).exists():
+        preview_url = article_url(run.blog)
     fields = [
         {
             "name": key,
@@ -954,6 +963,13 @@ def ai_run(request, pk, run_id, action=None):
             "stale": ai.stale(run),
             "request_key": uuid.uuid4(),
             "source_context": json.dumps(run.input, indent=2, ensure_ascii=False),
+            "linkedin_text": linkedin_text,
+            "linkedin_preview_url": preview_url,
+            "linkedin_preview_image": image_url(
+                run.blog.cover_image, project.seo_settings
+            )
+            if run.blog_id and run.blog.cover_image
+            else "",
         },
     )
 

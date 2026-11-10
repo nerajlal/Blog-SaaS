@@ -43,3 +43,10 @@ document.querySelectorAll('[data-linkedin-copy]').forEach(link=>link.addEventLis
  const fallback=()=>{const field=document.createElement('textarea');field.value=text;field.style.position='fixed';field.style.opacity='0';document.body.append(field);field.select();let copied=false;try{copied=document.execCommand('copy');}catch{}field.remove();if(copied)success();else{status.textContent='Clipboard access was blocked. Use Copy Body or select and copy the text, then paste it into LinkedIn.';document.getElementById('result-body')?.focus();}};
  if(navigator.clipboard?.writeText){navigator.clipboard.writeText(text).then(success,fallback);}else{fallback();}
 }));
+
+const linkedinPreview=document.querySelector('[data-linkedin-preview]');
+if(linkedinPreview){
+ const body=document.getElementById('result-body'),tags=document.getElementById('result-hashtags'),copy=document.getElementById('linkedin-preview-copy'),count=document.querySelector('[data-linkedin-count]'),expand=document.querySelector('[data-linkedin-expand]');
+ const update=()=>{const text=body?.value.trim()||'',hashtags=tags?.value.trim()||'';const combined=text+(hashtags&&!text.includes(hashtags)?'\n\n'+hashtags:'');copy.textContent=combined||'Your post text will appear here.';count.textContent=combined.length+' characters'+(combined.includes('[BLOG_URL]')?' · Replace [BLOG_URL] before sharing.':'');};
+ body?.addEventListener('input',update);tags?.addEventListener('input',update);expand?.addEventListener('click',()=>{const open=expand.getAttribute('aria-expanded')!=='true';expand.setAttribute('aria-expanded',String(open));copy.classList.toggle('is-expanded',open);expand.textContent=open?'Show less':'Show full post';});update();
+}
