@@ -56,3 +56,45 @@ body{padding-top:75px}
 .benefit-items strong{font-size:14px;font-weight:550;letter-spacing:-.25px;color:#536171}
 .benefit-items small{font-size:11px;letter-spacing:0;font-weight:400;color:#8d98a4}
 @media(max-width:767px){.customer-benefits h2{font-size:24px}.customer-benefits .benefit-items{grid-template-columns:minmax(0,1fr);gap:25px}.benefit-items strong{font-size:14px}.benefit-items small{font-size:11px}}
+
+/* An agency-focused introduction: one workspace, distinct client publications. */
+.agency-hero{padding:110px 0 95px;text-align:left;overflow:visible}
+.agency-hero-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:70px;align-items:center}
+.agency-label{color:#3564cb;font-size:12px;font-weight:600;letter-spacing:.3px}
+.agency-hero h1{font-size:clamp(38px,3.65vw,54px);line-height:1.16;letter-spacing:-2.4px;margin:28px 0}
+.agency-hero .hero-description{font-size:16px;max-width:49ch;line-height:1.9;margin-bottom:30px}
+.agency-hero .button-row{justify-content:flex-start;align-items:center;gap:24px;margin-top:0}
+.agency-hero .text-link{margin:0;font-size:13px}
+.agency-hero-note{font-size:11px;color:#87919e;margin:32px 0 0}
+.agency-hero+.demo-section{margin-top:0}
+.publishing-diagram{width:100%;padding-top:15px;position:relative}
+.diagram-hub{background:#315dca;color:white;border:1px solid #315dca;border-radius:15px;width:180px;min-height:100px;margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 8px 24px #315dca12}
+.diagram-brand{font-size:21px;font-weight:600;letter-spacing:-.6px}.diagram-hub>span:last-child{font-size:12px;color:#d2defe}
+.diagram-connectors{height:78px;position:relative;width:100%}.diagram-connectors>span{position:absolute;height:39px;width:2px;background:#4168cf;left:50%;top:0}.diagram-connectors:after{content:'';position:absolute;height:2px;background:#4168cf;top:38px;left:16.66%;right:16.66%}.diagram-connectors i{position:absolute;width:2px;height:40px;top:38px;background:#4168cf}.diagram-connectors i:nth-of-type(1){left:16.66%}.diagram-connectors i:nth-of-type(2){left:50%}.diagram-connectors i:nth-of-type(3){left:83.33%}
+.diagram-sites{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.diagram-site{background:white;border:1px solid #dfe5ec;border-radius:11px;text-align:center;padding:18px 9px 17px;min-width:0;box-shadow:0 3px 8px #203c5f03}.diagram-project{font-size:7px;letter-spacing:.8px;color:#9aa8bb}.diagram-page{margin:20px auto 17px;width:80%;display:flex;flex-direction:column;align-items:center;gap:6px}.diagram-page i{display:block;height:5px;width:100%;max-width:85px;background:#e3e8f0;border-radius:5px}.diagram-page i:last-child{width:65%}.diagram-site strong{display:block;font-size:11px;letter-spacing:-.2px;font-weight:500;color:#67788d}.diagram-site>span:last-child{font-size:8px;color:#9aa7b7;display:block;margin-top:5px}.diagram-caption{text-align:center;font-size:9px;margin:20px 0 0;color:#95a0ad}
+@media(min-width:768px) and (max-width:1050px){.agency-hero-grid{gap:30px}.agency-hero{padding:85px 0 70px}.agency-hero h1{font-size:39px;letter-spacing:-1.8px}.agency-hero .hero-description{font-size:14px}.diagram-sites{gap:8px}.diagram-site{padding-inline:5px}.diagram-site strong{font-size:10px}}
+@media(max-width:767px){.agency-hero{padding:65px 0 55px}.agency-hero-grid{grid-template-columns:minmax(0,1fr);gap:48px}.agency-label{font-size:11px}.agency-hero h1{font-size:40px;letter-spacing:-1.9px;margin:22px 0}.agency-hero .hero-description{font-size:14px;padding:0;max-width:50ch}.agency-hero .button-row{gap:22px}.agency-hero .text-link{font-size:12px}.agency-hero-note{font-size:10px;margin-top:25px;max-width:40ch}.publishing-diagram{max-width:470px;margin:auto}.diagram-hub{width:150px;min-height:85px}.diagram-brand{font-size:19px}.diagram-hub>span:last-child{font-size:11px}.diagram-connectors{height:65px}.diagram-connectors>span{height:33px}.diagram-connectors:after{top:32px}.diagram-connectors i{top:32px;height:33px}.diagram-sites{gap:9px}.diagram-site{padding:15px 5px}.diagram-project{font-size:6px;letter-spacing:.3px}.diagram-site strong{font-size:9px}.diagram-page{margin:17px auto}.diagram-caption{font-size:8px}}
+@media(prefers-reduced-motion:no-preference){.diagram-hub{animation:hero-arrive .7s ease-out backwards}.diagram-connectors{animation:hero-arrive .7s .15s ease-out backwards}.diagram-site{animation:hero-arrive .7s .25s ease-out backwards}.diagram-site:nth-child(2){animation-delay:.35s}.diagram-site:nth-child(3){animation-delay:.45s}}
+
+/* Agency benefits keep the message concise and the layout open. */
+.agency-benefits{padding-block:65px 85px;border-bottom:1px solid var(--line)}
+.agency-benefits>h2{text-align:center;font-size:37px;letter-spacing:-1.5px;margin:0 0 48px}
+.agency-benefits .benefit-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:48px;margin:0}
+.agency-benefits article{min-width:0;text-align:left}
+.agency-benefits .benefit-symbol{width:45px;height:45px;display:grid;place-items:center;background:#edf2ff;border-radius:12px;color:#3563ce;margin-bottom:22px}
+.agency-benefits svg{width:21px;height:21px}
+.agency-benefits h3{font-size:19px;letter-spacing:-.6px;margin:0 0 12px}
+.agency-benefits p{font-size:13px;line-height:1.9;margin:0}
+.workflow-number{display:grid;place-items:center;width:34px;height:34px;border:1.5px solid #3975ed;border-radius:50%;color:#3975ed;font-size:15px;font-weight:550;margin-bottom:26px}
+.agency-workflow .workflow-grid h3{font-size:20px;margin-bottom:13px}
+.agency-workflow .workflow-grid p{font-size:13px;line-height:1.9}
+.workflow-cta{text-align:center;margin-top:35px}
+@media(max-width:1000px){.agency-benefits .benefit-items{gap:25px}}
+@media(max-width:767px){.agency-benefits{padding-block:45px 55px}.agency-benefits>h2{font-size:28px;margin-bottom:32px}.agency-benefits .benefit-items{grid-template-columns:minmax(0,1fr);gap:30px}.agency-benefits .benefit-symbol{margin-bottom:15px}.agency-benefits h3{font-size:19px}.agency-benefits p{font-size:12px}.agency-workflow .workflow-grid h3{font-size:20px}.agency-workflow .workflow-grid p{font-size:12px}.workflow-number{margin-bottom:18px}}
+
+.integration-support{margin-top:26px;padding-top:22px;border-top:1px solid #dce5ed}
+.integration-support strong{font-size:13px;font-weight:550;color:#46566b}
+.integration-support p{font-size:12px;margin:7px 0 8px;line-height:1.8}
+.integration-support a{display:inline-flex;align-items:center;gap:10px;font-size:13px;color:#3975ed;font-weight:500}
+.integration-support a:hover{text-decoration:underline}

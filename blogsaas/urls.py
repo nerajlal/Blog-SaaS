@@ -5,6 +5,7 @@ from django.contrib.auth import views as auth
 from django.urls import path
 from portal import views as v
 from portal import google_tools
+from portal import superadmin
 from portal.auth_views import LimitedPasswordResetView
 
 urlpatterns = [
@@ -146,6 +147,28 @@ urlpatterns = [
     path("api/v1/projects/sitemap.xml", v.api_sitemap, name="api_sitemap"),
     path("api/v1/projects/redirect", v.api_redirect, name="api_redirect"),
     path("api/v1/projects/not-found", v.api_not_found, name="api_not_found"),
+    path("superadmin", superadmin.dashboard, name="superadmin"),
+    path(
+        "superadmin/clients",
+        superadmin.dashboard,
+        {"section": "clients"},
+        name="superadmin_clients",
+    ),
+    path(
+        "superadmin/workspaces",
+        superadmin.dashboard,
+        {"section": "workspaces"},
+        name="superadmin_workspaces",
+    ),
+    path(
+        "superadmin/usage",
+        superadmin.dashboard,
+        {"section": "usage"},
+        name="superadmin_usage",
+    ),
+    path(
+        "superadmin/usage.csv", superadmin.usage_export, name="superadmin_usage_export"
+    ),
     path("django-admin/", admin.site.urls),
 ]
 if settings.DEBUG:

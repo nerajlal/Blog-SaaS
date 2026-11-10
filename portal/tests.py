@@ -372,6 +372,177 @@ class PortalTests(TestCase):
             "data-linkedin-copy",
         )
 
+    def test_superadmin_access_is_strict_and_not_visible_to_clients(self):
+        for route in ("superadmin", "superadmin_usage_export"):
+            self.assertEqual(self.client.get(reverse(route)).status_code, 403)
+        self.owner.is_staff = True
+        self.owner.save()
+        self.assertEqual(self.client.get(reverse("superadmin")).status_code, 403)
+        self.assertNotContains(
+            self.client.get(reverse("projects")), 'href="/superadmin"'
+        )
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("superadmin")).status_code, 302)
+
+    def test_superadmin_token_usage_filters_and_csv(self):
+        self.owner.is_superuser = self.owner.is_staff = True
+        self.owner.save()
+        AiRun.objects.create(
+            project=self.project,
+            user=self.owner,
+            action="social",
+            platform="linkedin",
+            state="complete",
+            fingerprint="x",
+            model="claude",
+            usage={
+                "input_tokens": 123,
+                "output_tokens": 45,
+                "cache_read_input_tokens": 8,
+                "output_tokens_details": {"thinking_tokens": 20},
+            },
+            input={"secret_prompt": "PRIVATE_PROMPT_MARKER"},
+            result={"body": "PRIVATE_RESULT_MARKER"},
+        )
+        AiRun.objects.create(
+            project=self.project,
+            user=self.owner,
+            action="draft",
+            state="failed",
+            fingerprint="y",
+            usage={},
+        )
+        response = self.client.get(reverse("superadmin"), {"month": "all"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total"]["input_tokens"], 123)
+        self.assertEqual(response.context["total"]["output_tokens"], 45)
+        self.assertEqual(response.context["total"]["missing_usage"], 1)
+        self.assertContains(response, "owner@example.com")
+        self.assertNotContains(response, "PRIVATE_PROMPT_MARKER")
+        self.assertNotContains(response, "PRIVATE_RESULT_MARKER")
+        self.assertNotContains(response, self.project.api_key)
+        self.assertEqual(response["Cache-Control"], "private, no-store")
+        export = self.client.get(reverse("superadmin_usage_export"), {"month": "all"})
+        self.assertContains(export, "cache_read_input_tokens")
+        self.assertNotContains(export, "PRIVATE_PROMPT_MARKER")
+        response = self.client.get(
+            reverse("superadmin"), {"month": "all", "q": "not-an-existing-client"}
+        )
+        self.assertEqual(response.context["total"]["requests"], 0)
+        self.assertEqual(
+            self.client.get(reverse("superadmin"), {"month": "invalid"}).status_code,
+            400,
+        )
+
+    def test_superadmin_month_filter_and_workspace_reservations(self):
+        self.owner.is_superuser = self.owner.is_staff = True
+        self.owner.save()
+        old = AiRun.objects.create(
+            project=self.project,
+            user=self.owner,
+            action="draft",
+            state="complete",
+            fingerprint="old",
+            usage={"input_tokens": 500},
+            created_at=timezone.now() - timedelta(days=70),
+        )
+        AiSettings.objects.create(
+            scope=ai.scope(self.project), enabled=True, monthly_limit=12
+        )
+        AiUsage.objects.create(
+            scope=ai.scope(self.project),
+            month=timezone.now().strftime("%Y-%m"),
+            requests=3,
+        )
+        response = self.client.get(reverse("superadmin"))
+        self.assertEqual(response.context["total"]["requests"], 0)
+        self.assertEqual(response.context["workspaces_usage"][0]["reserved"], 3)
+        self.assertEqual(
+            self.client.get(reverse("superadmin"), {"month": "all"}).context["total"][
+                "input_tokens"
+            ],
+            500,
+        )
+
+    def test_create_superadmin_command_and_existing_account_protection(self):
+        from django.core.management.base import CommandError
+
+        with patch(
+            "portal.management.commands.create_superadmin.getpass",
+            return_value="StrongUniqueAdmin492!pine",
+        ):
+            call_command(
+                "create_superadmin", email="platform@example.com", stdout=io.StringIO()
+            )
+        user = User.objects.get(email="platform@example.com")
+        self.assertTrue(user.is_superuser and user.is_staff)
+        self.assertTrue(user.check_password("StrongUniqueAdmin492!pine"))
+        with self.assertRaises(CommandError):
+            call_command("create_superadmin", email=self.owner.email)
+        self.owner.refresh_from_db()
+        self.assertFalse(self.owner.is_superuser)
+        with (
+            patch(
+                "portal.management.commands.create_superadmin.getpass",
+                return_value="password",
+            ),
+            self.assertRaises(CommandError),
+        ):
+            call_command("create_superadmin", email="weak@example.com")
+        self.assertFalse(User.objects.filter(email="weak@example.com").exists())
+
+    def test_superadmin_login_and_navigation_skip_client_creation(self):
+        self.owner.is_superuser = self.owner.is_staff = True
+        self.owner.save()
+        for route in ("home", "login", "projects"):
+            self.assertRedirects(self.client.get(reverse(route)), reverse("superadmin"))
+        response = self.client.get(reverse("superadmin"))
+        self.assertContains(response, "Superadmin navigation")
+        self.assertContains(response, "Account management")
+        self.assertNotContains(response, "+ New workspace")
+        self.assertNotContains(response, 'href="/admin/projects"')
+        count = Workspace.objects.count()
+        self.assertRedirects(
+            self.client.post(
+                reverse("workspace_create"), {"name": "Should not create"}
+            ),
+            reverse("superadmin"),
+        )
+        self.assertEqual(Workspace.objects.count(), count)
+        self.client.logout()
+        response = self.client.post(
+            reverse("login"),
+            {"username": self.owner.email, "password": "GoodPassword492!"},
+        )
+        self.assertRedirects(response, reverse("superadmin"))
+        self.assertEqual(
+            self.client.get(reverse("admin:portal_aisettings_changelist")).status_code,
+            200,
+        )
+
+    def test_superadmin_sections_have_separate_pages(self):
+        self.owner.is_superuser = self.owner.is_staff = True
+        self.owner.save()
+        sections = {
+            "superadmin": "overview",
+            "superadmin_clients": "clients",
+            "superadmin_workspaces": "workspaces",
+            "superadmin_usage": "usage",
+        }
+        for route, section in sections.items():
+            response = self.client.get(reverse(route))
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.context["admin_section"], section)
+            for key in ("clients", "workspaces", "usage"):
+                if key == section:
+                    self.assertContains(response, 'id="' + key + '"')
+                else:
+                    self.assertNotContains(response, 'id="' + key + '"')
+        self.owner.is_superuser = False
+        self.owner.save()
+        for route in sections:
+            self.assertEqual(self.client.get(reverse(route)).status_code, 403)
+
     def test_landing_and_auth_pages(self):
         self.client.logout()
         for url in ["/", "/docs", "/login", "/register", "/forgot-password"]:

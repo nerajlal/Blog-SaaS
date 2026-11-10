@@ -1,0 +1,1 @@
+{% extends 'admin/index.html' %}{% block content %}{% if user.is_superuser %}<div class="module"><h2>Platform usage</h2><p><a href="{% url 'superadmin' %}">Clients, workspaces &amp; AI token usage →</a></p></div>{% endif %}{{ block.super }}{% endblock %}

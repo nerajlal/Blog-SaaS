@@ -62,13 +62,13 @@ def admin_docs(request):
 
 def home(request):
     if request.user.is_authenticated and request.path == "/":
-        return redirect("projects")
+        return redirect("superadmin" if request.user.is_superuser else "projects")
     return render(request, "portal/landing.html")
 
 
 def sign_in(request):
     if request.user.is_authenticated:
-        return redirect("projects")
+        return redirect("superadmin" if request.user.is_superuser else "projects")
     if request.method == "POST":
         try:
             rate_limit(request, "login", 5, 60)
@@ -78,7 +78,7 @@ def sign_in(request):
     if request.method == "POST" and form.is_valid():
         auth_login(request, form.get_user())
         request.session.set_expiry(1209600 if request.POST.get("remember") else 0)
-        return redirect("projects")
+        return redirect("superadmin" if request.user.is_superuser else "projects")
     return render(
         request,
         "portal/auth.html",
@@ -126,6 +126,8 @@ def sign_out(request):
 @page
 @require_POST
 def workspace_action(request, pk=None):
+    if request.user.is_superuser:
+        return redirect("superadmin")
     if pk:
         ws = get_object_or_404(Workspace, pk=pk, memberships__user=request.user)
     else:
@@ -145,6 +147,8 @@ def workspace_action(request, pk=None):
 @page
 @require_http_methods(["GET", "POST"])
 def projects(request):
+    if request.user.is_superuser:
+        return redirect("superadmin")
     ws = current_workspace(request.user)
     can_create = Membership.objects.filter(
         workspace=ws, user=request.user, role__in=["owner", "admin", "editor"]

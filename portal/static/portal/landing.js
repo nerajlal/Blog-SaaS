@@ -11,7 +11,7 @@
  tabs.forEach((tab,index)=>{tab.addEventListener('click',()=>activate(tab));tab.addEventListener('keydown',event=>{let next;if(event.key==='ArrowRight')next=(index+1)%tabs.length;else if(event.key==='ArrowLeft')next=(index-1+tabs.length)%tabs.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=tabs.length-1;else return;event.preventDefault();activate(tabs[next]);tabs[next].focus();});});
  // Animate only visible illustrations; all content remains readable without JavaScript.
  const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
- const revealTargets=[...document.querySelectorAll('.section-heading,.context-card,.ai-copy,.workflow-grid article,.feature-card,.developer-grid>div,.faq-list,.final-cta')];
+ const revealTargets=[...document.querySelectorAll('.section-heading,.agency-benefits article,.context-card,.ai-copy,.workflow-grid article,.feature-card,.developer-grid>div,.faq-list,.final-cta')];
  const illustrated=[...document.querySelectorAll('.feature-card,.workflow-grid article,.context-card')];
  const revealed=new WeakSet();
  const observer='IntersectionObserver' in window?new IntersectionObserver(entries=>entries.forEach(entry=>{
