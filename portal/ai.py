@@ -16,7 +16,7 @@ PROFILE_FIELDS = {
     "summary": "Business description",
     "products": "Products, services and features",
     "audience": "Audience and region",
-    "positioning": "Brand story and differentiators",
+    "positioning": "Brand positioning and differentiators",
     "facts": "Approved facts and source URLs",
     "tone": "Brand voice",
     "language": "Language and spelling",
@@ -102,7 +102,7 @@ def enqueue(project, user, action, data, key, blog=None, platform=""):
         raise ValidationError("Approve project details before generation.")
     if blog:
         if blog.project_id != project.pk:
-            raise ValidationError("Story does not belong to this project.")
+            raise ValidationError("Post does not belong to this project.")
         data["blog_revision"] = revision(blog)
         data["article"] = {
             "title": blog.title,

@@ -1,6 +1,7 @@
 {% extends 'portal/auth_base.html' %}
 {% block content %}
 <div class="auth-card-inner">
+{% for message in messages %}<div class="notice" role="status">{{ message }}</div>{% endfor %}
   <div class="auth-header">
     <h2 class="auth-title">{{ title }}</h2>
     <p class="auth-subtitle">

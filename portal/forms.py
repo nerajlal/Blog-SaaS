@@ -23,7 +23,9 @@ class LoginForm(AuthenticationForm):
             )
 
     def clean_username(self):
-        return self.cleaned_data["username"].lower()
+        email = self.cleaned_data["username"].lower()
+        account = User.objects.filter(email__iexact=email).only("username").first()
+        return account.username if account else email
 
 
 class RegisterForm(UserCreationForm):

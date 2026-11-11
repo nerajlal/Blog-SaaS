@@ -55,7 +55,7 @@
       <p class="project-card-description">{{ project.description|default:'Your next chapter starts here.' }}</p>
 
       <div class="project-card-bottom">
-        <span>{{ project.blogs_count }} stories · Updated {{ project.updated_at|timesince }} ago</span>
+        <span>{{ project.blogs_count }} posts · Updated {{ project.updated_at|timesince }} ago</span>
       </div>
 
       <a class="project-details-link" href="{% url 'profile' project.pk %}">
@@ -78,7 +78,7 @@
       {% if project.manage %}
         <dialog id="delete-{{ project.pk }}" class="modal">
           <h2>Delete project?</h2>
-          <p>Permanently delete {{ project.name }}, its stories and project data. This cannot be undone.</p>
+          <p>Permanently delete {{ project.name }}, its posts and project data. This cannot be undone.</p>
           <form method="post" action="{% url 'project_delete' project.pk %}" class="form-stack">
             {% csrf_token %}
             <label>Type {{ project.name }} to confirm
@@ -99,7 +99,7 @@
           <h2>Tell us about {{ project.name }}</h2>
           <p>Fill in your project details to get AI suggestions tailored to your business, products, and audience. You can keep writing and set this up later.</p>
           <div class="actions">
-            <button class="button light" data-close-dialog>Continue to blogs</button>
+            <button class="button light" data-close-dialog>Continue to posts</button>
             <a class="button" href="{% url 'profile' project.pk %}">
               {% if project.manage %}Set up project details{% else %}View project details{% endif %}
             </a>

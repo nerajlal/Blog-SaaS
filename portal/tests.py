@@ -1171,7 +1171,7 @@ class ImportTests(TestCase):
                         "project_id": 30,
                         "user_id": 12,
                         "category_id": 40,
-                        "title": "Legacy story",
+                        "title": "Legacy post",
                         "slug": "legacy-story",
                         "content": "<p>Legacy text</p>",
                         "status": "draft",
@@ -1207,7 +1207,7 @@ class ImportTests(TestCase):
         self.assertEqual(Blog.objects.get(pk=50).category_id, 40)
         self.assertEqual(User.objects.get(pk=12).current_workspace_id, 20)
         self.assertEqual(AiProfile.objects.get(pk=70).data["summary"], "Old facts")
-        created = Blog.objects.create(project_id=30, user_id=12, title="Next story")
+        created = Blog.objects.create(project_id=30, user_id=12, title="Next post")
         self.assertGreater(created.pk, 50)
 
 
@@ -1223,13 +1223,13 @@ class CrawlerTests(TestCase):
             ]
         )
         self.assertFalse(
-            policy.can_fetch("BlogSaaS-AI", "https://example.com/private/account")
+            policy.can_fetch("TryWryter-AI", "https://example.com/private/account")
         )
         self.assertTrue(
-            policy.can_fetch("BlogSaaS-AI", "https://example.com/private/public")
+            policy.can_fetch("TryWryter-AI", "https://example.com/private/public")
         )
         self.assertFalse(
-            policy.can_fetch("BlogSaaS-AI", "https://example.com/page?secret=value")
+            policy.can_fetch("TryWryter-AI", "https://example.com/page?secret=value")
         )
 
 
@@ -1443,7 +1443,7 @@ class SocialShortcutTests(TestCase):
     def test_shortcuts_cannot_select_a_foreign_story(self):
         other = Project.objects.create(user=self.owner, name="Another publication")
         foreign = Blog.objects.create(
-            project=other, user=self.owner, title="Foreign story"
+            project=other, user=self.owner, title="Foreign post"
         )
         self.assertEqual(
             self.client.get(
@@ -1489,7 +1489,7 @@ class SeoQualityTests(TestCase):
         self.blog.content_reviewed_at = timezone.now()
         self.blog.save()
         Blog.objects.create(
-            project=self.project, user=self.owner, title="An unrelated new story"
+            project=self.project, user=self.owner, title="An unrelated new post"
         )
         self.assertFalse(analysis_is_stale(analysis, self.blog))
         self.blog.sections.first().delete()
@@ -1520,7 +1520,7 @@ class SeoQualityTests(TestCase):
         self.assertEqual(job.payload["processed"], 56)
         self.assertEqual(SeoAnalysis.objects.count(), 56)
         response = self.client.get(reverse("health", args=[self.project.pk]))
-        self.assertContains(response, "Analyze all 56 stories")
+        self.assertContains(response, "Analyze all 56 posts")
         self.assertEqual(len(response.context["rows"]), 25)
 
     def test_reviewed_metadata_is_applied_without_changing_the_article(self):
@@ -1625,7 +1625,9 @@ class SeoQualityTests(TestCase):
         # 2. Starting Google auth redirects to Google with state
         resp = self.client.get(reverse("google_auth_start"))
         self.assertEqual(resp.status_code, 302)
-        self.assertTrue(resp["Location"].startswith("https://accounts.google.com/o/oauth2/v2/auth"))
+        self.assertTrue(
+            resp["Location"].startswith("https://accounts.google.com/o/oauth2/v2/auth")
+        )
         session = self.client.session
         flow = session.get("google_login_oauth")
         self.assertIsNotNone(flow)
@@ -1633,7 +1635,11 @@ class SeoQualityTests(TestCase):
 
         # 3. Callback creates new user and workspace on successful OAuth
         with patch("requests.post") as mock_post, patch("requests.get") as mock_get:
-            mock_post.return_value = Mock(ok=True, status_code=200, json=lambda: {"access_token": "ya29.mock_token"})
+            mock_post.return_value = Mock(
+                ok=True,
+                status_code=200,
+                json=lambda: {"access_token": "ya29.mock_token"},
+            )
             mock_get.return_value = Mock(
                 ok=True,
                 status_code=200,
@@ -1652,5 +1658,186 @@ class SeoQualityTests(TestCase):
             self.assertRedirects(callback_resp, reverse("projects"))
             created_user = User.objects.get(email="newgoogleuser@example.com")
             self.assertEqual(created_user.first_name, "Google")
+            self.assertEqual(created_user.username, created_user.email)
             self.assertIsNotNone(created_user.current_workspace)
-            self.assertTrue(Membership.objects.filter(user=created_user, role="owner").exists())
+            self.assertTrue(
+                Membership.objects.filter(user=created_user, role="owner").exists()
+            )
+
+    def test_scheduled_status_becomes_public_at_due_time(self):
+        due = timezone.now() + timedelta(days=2)
+        url = reverse("blog_action", args=[self.blog.pk, "status"])
+        response = self.client.post(
+            url, {"status": "scheduled", "published_at": due.isoformat()}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.status, "scheduled")
+        self.assertFalse(Blog.objects.live().filter(pk=self.blog.pk).exists())
+        with patch(
+            "portal.models.timezone.now", return_value=due + timedelta(seconds=1)
+        ):
+            self.assertTrue(Blog.objects.live().filter(pk=self.blog.pk).exists())
+            result = self.client.get(
+                reverse("api_blog", args=[self.blog.slug]),
+                HTTP_X_API_KEY=self.project.api_key,
+            )
+            self.assertEqual(result.status_code, 200)
+        self.blog.status = "draft"
+        self.blog.save()
+        with patch("portal.models.timezone.now", return_value=due + timedelta(days=1)):
+            self.assertFalse(Blog.objects.live().filter(pk=self.blog.pk).exists())
+
+    def test_bad_schedule_does_not_change_post(self):
+        url = reverse("blog_action", args=[self.blog.pk, "status"])
+        original = (self.blog.status, self.blog.published_at, self.blog.revision)
+        for value in (
+            "",
+            "not-a-date",
+            "2026-99-99T12:30",
+            (timezone.now() - timedelta(days=1)).isoformat(),
+        ):
+            response = self.client.post(
+                url, {"status": "scheduled", "published_at": value}
+            )
+            self.assertEqual(response.status_code, 400)
+            self.blog.refresh_from_db()
+            self.assertEqual(
+                (self.blog.status, self.blog.published_at, self.blog.revision), original
+            )
+        self.assertEqual(self.client.post(url, {"status": "invalid"}).status_code, 400)
+
+    def test_google_login_errors_redirect_safely(self):
+        self.client.logout()
+        with override_settings(GOOGLE_CLIENT_ID="", GOOGLE_CLIENT_SECRET=""):
+            self.assertRedirects(
+                self.client.get(reverse("google_auth_start")), reverse("login")
+            )
+        for query in ({}, {"state": "bad", "code": "bad"}, {"error": "access_denied"}):
+            self.assertRedirects(
+                self.client.get(reverse("google_auth_callback"), query),
+                reverse("login"),
+            )
+        with override_settings(GOOGLE_CLIENT_ID="test", GOOGLE_CLIENT_SECRET="test"):
+            self.client.get(reverse("google_auth_start"))
+            flow = self.client.session["google_login_oauth"]
+            import requests
+
+            with patch(
+                "portal.views.requests.post",
+                side_effect=requests.Timeout("private-provider-detail"),
+            ):
+                result = self.client.get(
+                    reverse("google_auth_callback"),
+                    {"state": flow["state"], "code": "fake"},
+                    follow=True,
+                )
+            self.assertEqual(result.status_code, 200)
+            self.assertContains(result, "temporarily unavailable")
+            self.assertNotContains(result, "private-provider-detail")
+            self.client.get(reverse("google_auth_start"))
+            flow = self.client.session["google_login_oauth"]
+            with patch("portal.views.requests.post", return_value=Mock(ok=False)):
+                self.assertRedirects(
+                    self.client.get(
+                        reverse("google_auth_callback"),
+                        {"state": flow["state"], "code": "fake"},
+                    ),
+                    reverse("login"),
+                )
+
+    def test_existing_google_style_username_can_log_in_by_email(self):
+        user = User.objects.create_user(
+            username="legacygoogle",
+            email="legacygoogle@example.com",
+            password="StrongLegacy492!",
+        )
+        self.client.logout()
+        response = self.client.post(
+            reverse("login"), {"username": user.email, "password": "StrongLegacy492!"}
+        )
+        self.assertRedirects(response, reverse("projects"))
+        self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
+        user.refresh_from_db()
+        self.assertEqual(user.username, "legacygoogle")
+
+    @override_settings(AI_MONTHLY_REQUEST_LIMIT=5)
+    def test_quota_meter_uses_enforced_platform_limit(self):
+        AiSettings.objects.create(
+            scope=ai.scope(self.project), enabled=True, monthly_limit=100
+        )
+        AiUsage.objects.create(
+            scope=ai.scope(self.project),
+            month=timezone.now().strftime("%Y-%m"),
+            requests=5,
+        )
+        response = self.client.get(reverse("profile", args=[self.project.pk]))
+        self.assertEqual(response.context["effective_limit"], 5)
+        self.assertEqual(response.context["usage_percent"], 100)
+        self.assertContains(response, "of 5 requests")
+
+    def test_saved_blog_preview_is_private_formatted_and_read_only(self):
+        self.blog.content = (
+            "<h2>Preview heading</h2><p>Saved content</p><script>alert(1)</script>"
+        )
+        self.blog.save()
+        original_revision = self.blog.revision
+        response = self.client.get(reverse("blog_preview", args=[self.blog.pk]))
+        self.assertContains(response, "<h2>Preview heading</h2>", html=True)
+        self.assertContains(response, self.blog.title)
+        self.assertContains(response, "Find a scent you enjoy.")
+        self.assertNotContains(response, "<script>")
+        self.assertEqual(response["X-Frame-Options"], "SAMEORIGIN")
+        self.assertIn("no-store", response["Cache-Control"])
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.revision, original_revision)
+        outsider = User.objects.create_user(
+            username="outsider@preview.com",
+            email="outsider@preview.com",
+            password="GoodPassword492!",
+        )
+        self.client.force_login(outsider)
+        self.assertEqual(
+            self.client.get(reverse("blog_preview", args=[self.blog.pk])).status_code,
+            403,
+        )
+        self.client.logout()
+        self.assertEqual(
+            self.client.get(reverse("blog_preview", args=[self.blog.pk])).status_code,
+            302,
+        )
+
+    def test_health_overview_counts_all_pages_and_excludes_stale_scores(self):
+        analysis = analyze(self.blog)
+        for index in range(25):
+            Blog.objects.create(
+                project=self.project, user=self.owner, title=f"Unanalyzed post {index}"
+            )
+        response = self.client.get(reverse("health", args=[self.project.pk]))
+        self.assertEqual(response.status_code, 200)
+        summary = response.context["health_summary"]
+        self.assertEqual(summary["total"], 26)
+        self.assertEqual(summary["fresh"], 1)
+        self.assertEqual(summary["unanalysed"], 25)
+        self.assertEqual(summary["average_seo"], analysis.report["seo_score"])
+        self.assertEqual(len(response.context["rows"]), 25)
+        self.assertContains(response, "Posts quick view")
+        self.assertContains(response, "conic-gradient")
+        self.blog.title = "Changed title makes analysis stale"
+        self.blog.save()
+        response = self.client.get(reverse("health", args=[self.project.pk]))
+        self.assertEqual(response.context["health_summary"]["stale"], 1)
+        self.assertEqual(response.context["health_summary"]["fresh"], 0)
+        self.assertIsNone(response.context["health_summary"]["average_seo"])
+        self.assertEqual(SeoAnalysis.objects.filter(blog=self.blog).count(), 1)
+
+
+    def test_trywryter_branding_preserves_public_api_paths(self):
+        from django.template.loader import render_to_string
+        self.client.logout()
+        for route in ("home", "login"):
+            response = self.client.get(reverse(route))
+            self.assertContains(response, "TryWryter")
+            self.assertNotContains(response, "BlogSaaS")
+        self.assertEqual(render_to_string("portal/reset_subject.txt").strip(), "Reset your TryWryter password")
+        self.assertEqual(reverse("api_blogs"), "/api/v1/projects/blogs")

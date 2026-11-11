@@ -212,7 +212,7 @@ def dashboard(request, section="overview"):
                 "Clients": User.objects.filter(is_superuser=False).count(),
                 "Workspaces": Workspace.objects.count(),
                 "Projects": Project.objects.count(),
-                "Blogs": Blog.objects.count(),
+                "Posts": Blog.objects.count(),
             },
         },
     )
@@ -244,7 +244,7 @@ def usage_export(request):
             "Client",
             "Workspace",
             "Project",
-            "Blog ID",
+            "Post ID",
             "Action",
             "Platform",
             "Model",

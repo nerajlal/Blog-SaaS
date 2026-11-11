@@ -21,7 +21,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.http import require_POST, require_http_methods, require_GET
 from . import ai
 from .forms import *
 from .models import *
@@ -79,7 +79,9 @@ def sign_in(request):
         auth_login(request, form.get_user())
         request.session.set_expiry(1209600 if request.POST.get("remember") else 0)
         return redirect("superadmin" if request.user.is_superuser else "projects")
-    google_configured = bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET)
+    google_configured = bool(
+        settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET
+    )
     return render(
         request,
         "portal/auth.html",
@@ -92,13 +94,35 @@ def sign_in(request):
     )
 
 
+def google_login_view(view):
+    @functools.wraps(view)
+    def wrapped(request, *args, **kwargs):
+        try:
+            return view(request, *args, **kwargs)
+        except requests.RequestException:
+            messages.error(
+                request, "Google sign-in is temporarily unavailable. Please try again."
+            )
+        except (ValidationError, ValueError, KeyError, TypeError):
+            messages.error(
+                request, "Google sign-in could not be completed. Please start again."
+            )
+        return redirect("login")
+
+    return wrapped
+
+
+@google_login_view
+@require_GET
 def google_auth_start(request):
     if request.user.is_authenticated:
         return redirect("projects")
     if not (settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET):
         raise ValidationError("Google Login is not configured yet.")
     rate_limit(request, "google-login", 10, 60)
-    redirect_uri = getattr(settings, "GOOGLE_AUTH_REDIRECT_URI", "") or request.build_absolute_uri(reverse("google_auth_callback"))
+    redirect_uri = getattr(
+        settings, "GOOGLE_AUTH_REDIRECT_URI", ""
+    ) or request.build_absolute_uri(reverse("google_auth_callback"))
     state = secrets.token_urlsafe(24)
     verifier = secrets.token_urlsafe(32)
     challenge = (
@@ -126,8 +150,12 @@ def google_auth_start(request):
     return redirect("https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params))
 
 
+@google_login_view
+@require_GET
 def google_auth_callback(request):
     flow = request.session.pop("google_login_oauth", None)
+    if request.GET.get("error"):
+        raise ValidationError("Google sign-in was cancelled or declined.")
     state = request.GET.get("state", "")
     code = request.GET.get("code", "")
     if (
@@ -136,7 +164,9 @@ def google_auth_callback(request):
         or timezone.now().timestamp() - flow.get("time", 0) > 600
         or not code
     ):
-        raise ValidationError("Google login session expired or state did not match. Please try again.")
+        raise ValidationError(
+            "Google login session expired or state did not match. Please try again."
+        )
 
     token_resp = requests.post(
         "https://oauth2.googleapis.com/token",
@@ -168,20 +198,17 @@ def google_auth_callback(request):
 
     email = (profile.get("email") or "").strip().lower()
     email_verified = profile.get("email_verified", False)
-    if not email or not email_verified:
-        raise ValidationError("Your Google account must have a verified email address to log in.")
+    if not email or email_verified is not True:
+        raise ValidationError(
+            "Your Google account must have a verified email address to log in."
+        )
 
     user = User.objects.filter(email__iexact=email).first()
     if not user:
         given_name = (profile.get("given_name") or "").strip()
         family_name = (profile.get("family_name") or "").strip()
         full_name = (profile.get("name") or "").strip()
-        base_username = email.split("@")[0][:30] or "user"
-        username = base_username
-        suffix = 1
-        while User.objects.filter(username__iexact=username).exists():
-            username = f"{base_username}_{suffix}"
-            suffix += 1
+        username = email
 
         with transaction.atomic():
             user = User.objects.create(
@@ -320,7 +347,7 @@ def projects(request):
             "can_create": can_create,
             "stats": {
                 "Projects": query.count(),
-                "Total stories": blogs.count(),
+                "Total posts": blogs.count(),
                 "Published": blogs.live().count(),
                 "Drafts": blogs.filter(status="draft").count(),
             },
@@ -335,7 +362,7 @@ def project_delete(request, pk):
     if request.POST.get("project_name") != project.name:
         raise ValidationError("Type the exact project name to confirm deletion.")
     project.delete()
-    messages.success(request, "Project and its stories deleted.")
+    messages.success(request, "Project and its posts deleted.")
     return redirect("projects")
 
 
@@ -361,6 +388,37 @@ def project_detail(request, pk, integration=False):
             ).get_page(request.GET.get("page")),
         },
     )
+
+
+@page
+@require_GET
+def blog_preview(request, blog_id):
+    blog = get_object_or_404(
+        Blog.objects.select_related("project", "category", "user"), pk=blog_id
+    )
+    project_for(request, blog.project_id, "view")
+    sections = [
+        {
+            "html": clean_html(section.text_content),
+            "image": image_url(section.image_path, blog.project.seo_settings),
+            "alt": section.image_alt,
+            "caption": section.image_caption,
+        }
+        for section in blog.sections.all()
+    ]
+    response = render(
+        request,
+        "portal/blog_preview.html",
+        {
+            "blog": blog,
+            "content": clean_html(blog.content),
+            "sections": sections,
+            "cover": image_url(blog.cover_image, blog.project.seo_settings),
+        },
+    )
+    response["X-Frame-Options"] = "SAMEORIGIN"
+    response["Cache-Control"] = "private, no-store"
+    return response
 
 
 @page
@@ -403,16 +461,14 @@ def edit_blog(request, pk=None, blog_id=None):
                     if form.cleaned_data["editor_revision"] != revision(current):
                         form.add_error(
                             None,
-                            "This story changed in another tab. Your text is preserved below; review before saving.",
+                            "This post changed in another tab. Your text is preserved below; review before saving.",
                         )
                         status = 409
                         raise ValidationError("conflict")
                 saved = form.save(commit=False)
                 saved.project = project
                 saved.user_id = blog.user_id or request.user.pk
-                if saved.status == "scheduled":
-                    saved.status = "published"
-                elif saved.status == "published" and not saved.published_at:
+                if saved.status == "published" and not saved.published_at:
                     saved.published_at = timezone.now()
                 saved.seo_settings = {
                     **saved.seo_settings,
@@ -470,7 +526,7 @@ def edit_blog(request, pk=None, blog_id=None):
                         version=request.POST["autosave_version"],
                     ).delete()
                 analyze(saved)
-            messages.success(request, "Story saved.")
+            messages.success(request, "Post saved.")
             return redirect("project", pk=project.pk)
         except Exception as exc:
             for value in uploaded:
@@ -498,26 +554,33 @@ def blog_action(request, blog_id, action):
             blog.delete()
         elif action in ("toggle-status", "status"):
             new_status = request.POST.get("status")
-            if new_status in ("draft", "published", "scheduled"):
-                blog.status = new_status
-            else:
-                blog.status = "draft" if blog.status == "published" else "published"
+            if new_status not in ("draft", "published", "scheduled"):
+                if action == "status":
+                    raise ValidationError("Choose a valid publication status.")
+                new_status = "draft" if blog.status == "published" else "published"
+            publish_time = None
+            if new_status == "scheduled":
+                from django.utils.dateparse import parse_datetime
 
-            if blog.status == "published":
+                try:
+                    publish_time = parse_datetime(
+                        request.POST.get("published_at", "").strip()
+                    )
+                except ValueError:
+                    publish_time = None
+                if publish_time and timezone.is_naive(publish_time):
+                    publish_time = timezone.make_aware(publish_time)
+                if not publish_time or publish_time <= timezone.now():
+                    raise ValidationError(
+                        "Choose a valid future publication date. Times are in UTC."
+                    )
+            blog.status = new_status
+            if new_status == "published":
                 blog.published_at = timezone.now()
-            elif blog.status == "draft":
+            elif new_status == "draft":
                 blog.published_at = None
-            elif blog.status == "scheduled":
-                publish_time_str = request.POST.get("published_at", "").strip()
-                if publish_time_str:
-                    from django.utils import dateparse
-                    parsed = dateparse.parse_datetime(publish_time_str)
-                    if parsed:
-                        if timezone.is_naive(parsed):
-                            parsed = timezone.make_aware(parsed)
-                        blog.published_at = parsed
-                if not blog.published_at or blog.published_at <= timezone.now():
-                    blog.published_at = timezone.now() + timedelta(days=1)
+            else:
+                blog.published_at = publish_time
 
             blog.revision += 1
             blog.save()
@@ -684,7 +747,7 @@ def profile(request, pk):
         .first()
         or 0
     )
-    limit = config.monthly_limit or 20
+    limit = min(config.monthly_limit, settings.AI_MONTHLY_REQUEST_LIMIT)
     usage_percent = min(100, int((used / limit) * 100)) if limit > 0 else 0
 
     return render(
@@ -699,6 +762,7 @@ def profile(request, pk):
             "ready": ai.ready(),
             "requests_used": used,
             "usage_percent": usage_percent,
+            "effective_limit": limit,
         },
     )
 
@@ -817,7 +881,7 @@ def studio(request, pk):
             elif action == "outline" and not data["brief"]:
                 raise ValidationError("Enter a topic or brief.")
             elif action in ["social", "metadata", "titles"] and not blog:
-                raise ValidationError("Select a saved story first.")
+                raise ValidationError("Select a saved post first.")
             elif action == "rewrite" and not data["selected_text"]:
                 raise ValidationError("Enter the text to rewrite.")
             if action == "social":
@@ -899,7 +963,7 @@ def social_version(request, pk, blog_id, platform):
             )
             data = {
                 "brief": f"Adapt the saved article below into a {labels[platform]} post. Preserve its message and supported facts. This is a social adaptation of the existing blog, not a new blog or outline.",
-                "preferences": "Use the approved project voice and audience. Avoid inventing facts or repeating a full-length blog article.",
+                "preferences": "Use the approved project voice and audience. Avoid inventing facts or repeating a full-length post article.",
                 "community_rules": "",
                 "public_url": source_url or "[BLOG_URL]",
             }
@@ -1001,7 +1065,7 @@ def ai_run(request, pk, run_id, action=None):
                 )
                 if ai.stale(run):
                     raise ValidationError(
-                        "The story or profile changed. Generate current SEO suggestions first."
+                        "The post or profile changed. Generate current SEO suggestions first."
                     )
                 result = run.edited or run.result
                 if not result.get("seo_title") or not result.get("focus_keyphrase"):
@@ -1213,17 +1277,96 @@ def health(request, pk, blog_id=None):
             "Whole-project analysis queued. This uses local checks, not a paid AI request.",
         )
         return redirect("health", pk=pk)
+    from collections import Counter
+    from django.db.models import OuterRef, Prefetch, Subquery
+
+    latest = (
+        SeoAnalysis.objects.filter(blog_id=OuterRef("blog_id"))
+        .order_by("-id")
+        .values("id")[:1]
+    )
+    recent_analyses = SeoAnalysis.objects.filter(pk=Subquery(latest))
+    prepared = query.select_related("project", "user", "category").prefetch_related(
+        "sections",
+        Prefetch("analyses", queryset=recent_analyses, to_attr="health_latest"),
+    )
     listing = Paginator(query, 25).get_page(request.GET.get("page"))
+    selected_ids = set(listing.object_list.values_list("id", flat=True))
     rows = []
-    for blog in listing:
-        analysis = blog.analyses.order_by("-id").first()
-        rows.append(
+    summary = {
+        "total": 0,
+        "fresh": 0,
+        "stale": 0,
+        "unanalysed": 0,
+        "strong": 0,
+        "fair": 0,
+        "attention": 0,
+    }
+    issues = Counter()
+    seo_scores, readability_scores = [], []
+    for blog in prepared.iterator(chunk_size=100):
+        analysis = blog.health_latest[0] if blog.health_latest else None
+        stale = analysis_is_stale(analysis, blog) if analysis else False
+        summary["total"] += 1
+        if not analysis:
+            summary["unanalysed"] += 1
+        elif stale:
+            summary["stale"] += 1
+        else:
+            summary["fresh"] += 1
+            score = analysis.report.get("seo_score", 0)
+            seo_scores.append(score)
+            readability_scores.append(analysis.report.get("readability_score", 0))
+            summary[
+                "strong" if score >= 80 else "fair" if score >= 50 else "attention"
+            ] += 1
+            issues.update(
+                check["label"]
+                for check in analysis.report.get("checks", [])
+                if check.get("passed") is False
+            )
+        if blog.pk in selected_ids:
+            rows.append({"blog": blog, "analysis": analysis, "stale": stale})
+    summary["average_seo"] = (
+        round(sum(seo_scores) / len(seo_scores)) if seo_scores else None
+    )
+    summary["average_readability"] = (
+        round(sum(readability_scores) / len(readability_scores))
+        if readability_scores
+        else None
+    )
+    summary["coverage"] = (
+        round(summary["fresh"] / summary["total"] * 100) if summary["total"] else 0
+    )
+    segments, cumulative = [], 0
+    for key, label, color in [
+        ("strong", "Strong · 80–100", "#61a88a"),
+        ("fair", "Developing · 50–79", "#d9af59"),
+        ("attention", "Needs attention · 0–49", "#d77979"),
+        ("stale", "Outdated analysis", "#a4a0cc"),
+        ("unanalysed", "Not analyzed", "#dfe6ec"),
+    ]:
+        start = cumulative
+        cumulative += summary[key] / summary["total"] * 100 if summary["total"] else 0
+        segments.append({"label": label, "count": summary[key], "color": color})
+        segments[-1]["gradient"] = f"{color} {start:.2f}% {cumulative:.2f}%"
+    summary["gradient"] = (
+        ", ".join(segment["gradient"] for segment in segments)
+        if summary["total"]
+        else "#dfe6ec 0% 100%"
+    )
+    issue_rows = (
+        [
             {
-                "blog": blog,
-                "analysis": analysis,
-                "stale": analysis_is_stale(analysis, blog) if analysis else False,
+                "label": label,
+                "count": count,
+                "percent": round(count / summary["fresh"] * 100),
             }
-        )
+            for label, count in issues.most_common(5)
+        ]
+        if summary["fresh"]
+        else []
+    )
     job = (
         WorkItem.objects.filter(project=project, kind="seo_analyze")
         .order_by("-id")
@@ -1238,6 +1381,9 @@ def health(request, pk, blog_id=None):
             "single": bool(blog_id),
             "page": listing,
             "total_stories": query.count(),
+            "health_summary": summary,
+            "health_segments": segments,
+            "health_issues": issue_rows,
             "analysis_job": job,
         },
     )
@@ -1317,7 +1463,7 @@ def links(request, pk, blog_id=None):
                     pk=edit.section_id
                 )
                 if digest(section.text_content) != edit.after_hash:
-                    raise ValidationError("Story changed. Guarded undo stopped.")
+                    raise ValidationError("Post changed. Guarded undo stopped.")
                 section.text_content = edit.before
                 section.save()
                 edit.reverted_at = timezone.now()

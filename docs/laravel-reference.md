@@ -1,6 +1,6 @@
-# BlogSaaS
+# TryWryter
 
-Laravel 12 / PHP 8.2+ headless publishing application. Users organize projects in workspaces, write rich-text/image sections, categorize posts, and publish immediately or on a schedule. Published content is available through a read-only REST API. The responsive landing page takes visual inspiration from https://task19.com/ while using original BlogSaaS content and UI illustrations.
+Laravel 12 / PHP 8.2+ headless publishing application. Users organize projects in workspaces, write rich-text/image sections, categorize posts, and publish immediately or on a schedule. Published content is available through a read-only REST API. The responsive landing page takes visual inspiration from https://task19.com/ while using original TryWryter content and UI illustrations.
 
 ## Local setup
 

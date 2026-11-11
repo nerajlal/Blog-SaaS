@@ -76,6 +76,7 @@ urlpatterns = [
         name="category_delete",
     ),
     path("admin/projects/<int:pk>/blogs/create", v.edit_blog, name="create_blog"),
+    path("admin/blogs/<int:blog_id>/preview", v.blog_preview, name="blog_preview"),
     path("admin/blogs/<int:blog_id>/edit", v.edit_blog, name="edit_blog"),
     path(
         "admin/projects/<int:pk>/blogs/<int:blog_id>/social/<str:platform>",

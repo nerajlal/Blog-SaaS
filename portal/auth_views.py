@@ -5,6 +5,7 @@ from .services import rate_limit
 
 
 class LimitedPasswordResetView(PasswordResetView):
+    subject_template_name = "portal/reset_subject.txt"
     def dispatch(self, request, *args, **kwargs):
         if request.method == "POST":
             try:

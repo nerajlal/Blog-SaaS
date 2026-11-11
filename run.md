@@ -1,4 +1,4 @@
-# Run BlogSaaS locally — Django
+# Run TryWryter locally — Django
 
 Use the `python` branch. The project directory contains a space, so keep the quotes in the commands below.
 

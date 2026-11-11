@@ -135,7 +135,7 @@
 
       <div class="ai-quota-meter-wrap">
         <div class="quota-numbers-row">
-          <span><strong>{{ requests_used }}</strong> of {{ ai_config.monthly_limit }} requests</span>
+          <span><strong>{{ requests_used }}</strong> of {{ effective_limit }} requests</span>
           <span class="quota-percent-label">{{ usage_percent }}%</span>
         </div>
         <div class="quota-progress-track" role="progressbar" aria-valuenow="{{ usage_percent }}" aria-valuemin="0" aria-valuemax="100">
@@ -148,7 +148,7 @@
 
       {% if not ready %}
         <p class="muted" style="color: #ef4444; font-size: 12px; margin-top: 10px;">
-          Claude API key is not configured. Manual blog writing is unaffected.
+          Claude API key is not configured. Manual post writing is unaffected.
         </p>
       {% endif %}
 

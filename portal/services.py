@@ -220,7 +220,7 @@ def fetch_public(url, method="GET", same_origin=None, robots=None):
             raise ValidationError(
                 "Redirect left the selected website; enter the final public URL."
             )
-        if robots and not robots.can_fetch("BlogSaaS-AI", url):
+        if robots and not robots.can_fetch("TryWryter-AI", url):
             raise ValidationError("Page is disallowed by robots.txt.")
         p = urlsplit(url)
         ips = []
@@ -259,7 +259,7 @@ def fetch_public(url, method="GET", same_origin=None, robots=None):
             response = pool.request(
                 method,
                 p.path + ("?" + p.query if p.query else ""),
-                headers={"Host": p.netloc, "User-Agent": "BlogSaaS-AI/1.0"},
+                headers={"Host": p.netloc, "User-Agent": "TryWryter-AI/1.0"},
                 redirect=False,
                 retries=False,
                 preload_content=False,
@@ -874,7 +874,7 @@ def preview_csv(project, user, kind, upload, reason):
     changes = []
     if kind == "metadata":
         if len({row["blog_id"] for row in rows}) != len(rows):
-            raise ValidationError("Each blog ID must be distinct.")
+            raise ValidationError("Each post ID must be distinct.")
         for row in rows:
             blog = project.blogs.get(pk=int(row["blog_id"]))
             after = {}

@@ -7,7 +7,7 @@
 <form method="post" action="{% url 'social_version' project.pk blog.pk 'reddit' %}">{% csrf_token %}<input type="hidden" name="request_key" value="{% new_request_key %}"><button class="social-version social-icon reddit" type="submit" aria-label="Reddit version" title="Reddit version"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13 10 2-7 5 1"/><circle cx="21" cy="4" r="1.5"/><ellipse cx="12" cy="15" rx="9" ry="6"/><path d="M4 12a2.5 2.5 0 1 0-2 3m18-3a2.5 2.5 0 1 1 2 3M8 17c2.5 2 5.5 2 8 0"/><circle cx="8" cy="14" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="14" r="1" fill="currentColor" stroke="none"/></svg></button></form>
 <form method="post" action="{% url 'social_version' project.pk blog.pk 'facebook' %}">{% csrf_token %}<input type="hidden" name="request_key" value="{% new_request_key %}"><button class="social-version social-icon facebook" type="submit" aria-label="Facebook version" title="Facebook version"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14.2 22v-9h3l.5-3.5h-3.5V7.2c0-1 .3-1.7 1.7-1.7H18V2.3c-.4-.1-1.6-.3-2.9-.3-2.8 0-4.8 1.7-4.8 4.9v2.6H7V13h3.3v9h3.9Z"/></svg></button></form>
 <form method="post" action="{% url 'social_version' project.pk blog.pk 'instagram' %}">{% csrf_token %}<input type="hidden" name="request_key" value="{% new_request_key %}"><button class="social-version social-icon instagram" type="submit" aria-label="Instagram version" title="Instagram version"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></button></form>
-</div><small class="social-source-note sr-only">Uses this saved blog. Existing versions reopen; first-time creation uses one AI request.</small></td><td>{{ blog.category|default:'Uncategorized' }}</td><td class="status-cell">
+</div><small class="social-source-note sr-only">Uses this saved post. Existing versions reopen; first-time creation uses one AI request.</small></td><td>{{ blog.category|default:'Uncategorized' }}</td><td class="status-cell">
   {% if can_edit %}
     <div class="status-control-wrap">
       <form method="post" action="{% url 'blog_action' blog.pk 'status' %}" class="status-dropdown-form" id="status-form-{{ blog.pk }}">
@@ -34,6 +34,7 @@
   {% endif %}
 </td><td>{{ blog.updated_at|timesince }} ago</td><td class="actions-cell">
   <div class="post-row-actions">
+    <a href="{% url 'blog_preview' blog.pk %}" class="post-icon-btn preview-btn" data-blog-preview title="Preview post" aria-label="Preview {{ blog.title }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></a>
     <a href="{% url 'report' blog.pk %}" class="post-action-btn seo-btn" title="SEO report">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       <span>SEO</span>
@@ -80,6 +81,7 @@
     {% endif %}
   </div>
 </td></tr>{% empty %}<tr><td colspan="5">Your next chapter starts here. Write your first post.</td></tr>{% endfor %}</tbody></table></div>
+<dialog class="modal blog-preview-modal" id="blog-preview-modal" aria-labelledby="blog-preview-heading"><div class="blog-preview-modal-bar"><h2 id="blog-preview-heading">Post preview</h2><button type="button" class="button light small" data-close-dialog aria-label="Close post preview">Close ×</button></div><iframe title="Saved post preview" sandbox="" referrerpolicy="same-origin"></iframe></dialog>
 {% if can_edit %}
   {% for blog in blogs %}
     <dialog class="modal" id="blog-delete-{{ blog.pk }}">
@@ -102,8 +104,8 @@
         {% csrf_token %}
         <input type="hidden" name="status" value="scheduled">
         <label>
-          Publication date and time
-          <input type="datetime-local" name="published_at" value="{% if blog.published_at %}{{ blog.published_at|date:'Y-m-d\TH:i' }}{% endif %}" required min="{% now 'Y-m-d\TH:i' %}" class="schedule-datetime-input">
+          Publication date and time (UTC)
+          <input type="datetime-local" name="published_at" aria-label="Publication date and time (UTC)" value="{% if blog.published_at %}{{ blog.published_at|date:'Y-m-d\TH:i' }}{% endif %}" required min="{% now 'Y-m-d\TH:i' %}" class="schedule-datetime-input">
         </label>
         <div class="actions" style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
           <button type="button" class="button light" data-close-dialog onclick="resetStatusSelect('{{ blog.pk }}', '{{ blog.status }}')">Cancel</button>
@@ -228,10 +230,15 @@
   white-space: nowrap;
 }
 .post-row-actions {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: repeat(3, 34px);
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
+  justify-content: end;
+  gap: 7px;
+}
+.post-row-actions > .seo-btn {
+  grid-column: span 2;
+  justify-content: center;
 }
 .post-action-btn {
   display: inline-flex;

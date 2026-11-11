@@ -105,8 +105,9 @@ class Category(models.Model):
 
 class BlogQuerySet(models.QuerySet):
     def live(self):
-        return self.filter(status="published").filter(
-            Q(published_at__isnull=True) | Q(published_at__lte=timezone.now())
+        return self.filter(status__in=["published", "scheduled"]).filter(
+            Q(status="published", published_at__isnull=True)
+            | Q(published_at__lte=timezone.now())
         )
 
 
