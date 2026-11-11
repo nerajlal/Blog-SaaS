@@ -12,7 +12,6 @@
     </p>
   </div>
 
-  {% if mode == 'login' %}
   <div class="oauth-section">
     <a href="{% url 'google_auth_start' %}" class="google-button">
       <svg class="google-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -21,7 +20,7 @@
         <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.92 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/>
         <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
       </svg>
-      <span>Continue with Google</span>
+      <span>{% if mode == 'login' %}Continue with Google{% else %}Sign up with Google{% endif %}</span>
     </a>
 
     <div class="auth-divider">
@@ -30,7 +29,6 @@
       <span class="divider-line"></span>
     </div>
   </div>
-  {% endif %}
 
   <form method="post" class="auth-form">
     {% csrf_token %}
