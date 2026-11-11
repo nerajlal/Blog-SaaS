@@ -502,7 +502,23 @@ def blog_action(request, blog_id, action):
                 blog.status = new_status
             else:
                 blog.status = "draft" if blog.status == "published" else "published"
-            blog.published_at = timezone.now() if blog.status == "published" else (None if blog.status == "draft" else blog.published_at)
+
+            if blog.status == "published":
+                blog.published_at = timezone.now()
+            elif blog.status == "draft":
+                blog.published_at = None
+            elif blog.status == "scheduled":
+                publish_time_str = request.POST.get("published_at", "").strip()
+                if publish_time_str:
+                    from django.utils import dateparse
+                    parsed = dateparse.parse_datetime(publish_time_str)
+                    if parsed:
+                        if timezone.is_naive(parsed):
+                            parsed = timezone.make_aware(parsed)
+                        blog.published_at = parsed
+                if not blog.published_at or blog.published_at <= timezone.now():
+                    blog.published_at = timezone.now() + timedelta(days=1)
+
             blog.revision += 1
             blog.save()
         elif action == "move":
