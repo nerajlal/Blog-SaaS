@@ -1868,3 +1868,27 @@ class SeoQualityTests(TestCase):
         self.assertEqual(self.client.post(url, {"name": "SaaS"}).status_code, 302)
         self.ws.refresh_from_db()
         self.assertEqual(self.ws.name, "SaaS")
+
+    def test_project_card_edit_preserves_connections_and_requires_management(self):
+        key, workspace = self.project.api_key, self.project.workspace_id
+        url = reverse("project_edit", args=[self.project.pk])
+        response = self.client.post(
+            url, {"name": "Updated project", "description": "New description"}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.name, "Updated project")
+        self.assertEqual(self.project.description, "New description")
+        self.assertEqual(
+            (self.project.api_key, self.project.workspace_id), (key, workspace)
+        )
+        self.assertEqual(self.client.post(url, {"name": "  "}).status_code, 400)
+        self.assertEqual(self.client.get(url).status_code, 405)
+        editor = User.objects.create_user(
+            username="cardeditor@example.com",
+            email="cardeditor@example.com",
+            password="GoodPassword492!",
+        )
+        Membership.objects.create(user=editor, workspace=self.ws, role="editor")
+        self.client.force_login(editor)
+        self.assertEqual(self.client.post(url, {"name": "Blocked"}).status_code, 403)

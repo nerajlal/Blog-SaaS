@@ -149,3 +149,5 @@
 }
 
 @media(prefers-reduced-motion:reduce){.ai-highlight-button .ai-sparkle{animation:none}}
+
+.project-card-management{display:flex;align-items:center;gap:6px;flex-shrink:0}.project-pencil-button{width:36px;height:36px;display:grid;place-items:center;border:1px solid #e2eaf2;border-radius:10px;background:#f4f8fd;color:#6583a6;cursor:pointer}.project-pencil-button:hover{background:#eaf2ff;color:#3975ed;border-color:#ccdcf4}

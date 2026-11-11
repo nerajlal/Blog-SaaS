@@ -374,6 +374,22 @@ def projects(request):
 
 @page
 @require_POST
+def project_edit(request, pk):
+    project = project_for(request, pk, "manage")
+    form = ProjectForm(request.POST, instance=project)
+    if not form.is_valid():
+        raise ValidationError(
+            [message for errors in form.errors.values() for message in errors]
+        )
+    project.name = form.cleaned_data["name"]
+    project.description = form.cleaned_data["description"]
+    project.save(update_fields=["name", "description", "updated_at"])
+    messages.success(request, "Project details updated.")
+    return redirect("projects")
+
+
+@page
+@require_POST
 def project_delete(request, pk):
     project = project_for(request, pk, "manage")
     if request.POST.get("project_name") != project.name:
