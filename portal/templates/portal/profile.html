@@ -1,1 +1,225 @@
-{% extends 'portal/base.html' %}{% block heading %}Project details{% endblock %}{% block content %}<section class="hero-row"><div><span class="eyebrow">A little context goes a long way</span><h1>{{ project.name }}</h1><p>Teach your assistant about your business, products, and audience.</p></div><a class="button" href="{% url 'studio' project.pk %}">AI studio ✧</a></section><div class="notice">{% if approved %}AI uses approved profile v{{ approved.revision }}.{% if profile.revision != approved.revision %} Draft changes need review.{% endif %}{% else %}Save and approve your project details before AI writing.{% endif %}</div><div class="two-columns"><section class="panel"><h2>Your business, in your words.</h2><form method="post" class="form-stack">{% csrf_token %}<fieldset {% if not can_manage %}disabled{% endif %}>{{ form.as_p }}{% if can_manage %}<button class="button">Save project details</button>{% endif %}</fieldset></form></section><aside class="stack"><section class="panel"><h3>Approve a fixed snapshot</h3><p>New details do not replace the approved version automatically.</p>{% if can_manage and profile %}<form method="post" action="{% url 'profile_action' project.pk 'approve' %}" class="form-stack">{% csrf_token %}<input type="hidden" name="revision" value="{{ profile.revision }}"><label class="check"><input type="checkbox" name="confirm" required>I checked the saved details and their sources.</label><button class="button light">Approve saved version</button></form>{% endif %}{% if approved %}<details><summary>Approved profile v{{ approved.revision }}</summary>{% for key,value in approved.data.items %}<h4>{{ key|title }}</h4><p>{{ value }}</p>{% endfor %}</details>{% endif %}</section><section class="panel"><h3>AI usage</h3><p>{{ requests_used }} requests reserved this month. This allowance is shared across the workspace; it is not a dollar spending guarantee.</p>{% if not ready %}<p>Claude is disabled or not configured. Manual project details still work.</p>{% endif %}{% if can_manage %}<form method="post" action="{% url 'profile_action' project.pk 'settings' %}" class="form-stack">{% csrf_token %}<label>Workspace AI access<select name="enabled"><option value="0" {% if not ai_config.enabled %}selected{% endif %}>Disabled</option><option value="1" {% if ai_config.enabled %}selected{% endif %}>Enabled</option></select></label><label>Monthly request allowance<input type="number" name="monthly_limit" min="1" value="{{ ai_config.monthly_limit }}"></label><button class="button light">Save allowance</button></form>{% endif %}</section></aside></div>{% endblock %}
+{% extends 'portal/base.html' %}
+{% block heading %}Project details{% endblock %}
+{% block content %}
+<section class="hero-row">
+  <div>
+    <span class="eyebrow">A little context goes a long way</span>
+    <h1>{{ project.name }}</h1>
+    <p>Teach your assistant about your business, products, and audience.</p>
+  </div>
+  <a class="button" href="{% url 'studio' project.pk %}">AI studio ✧</a>
+</section>
+
+<div class="notice">
+  {% if approved %}
+    AI uses approved profile v{{ approved.revision }}.{% if profile.revision != approved.revision %} Draft changes need review.{% endif %}
+  {% else %}
+    Save and approve your project details before AI writing.
+  {% endif %}
+</div>
+
+<div class="two-columns">
+  <section class="panel">
+    <h2>Your business, in your words.</h2>
+    <form method="post" class="form-stack">
+      {% csrf_token %}
+      <fieldset {% if not can_manage %}disabled{% endif %}>
+        {{ form.non_field_errors }}
+        {{ form.revision }}
+
+        <div class="profile-main-fields">
+          <div class="profile-section-header">
+            <h3>Essential details</h3>
+            <p class="muted">Core identity and context used across all AI generations.</p>
+          </div>
+
+          {% for field in form %}
+            {% if field.name in "name,website,business_type,summary,products,audience" %}
+              <div class="field-wrap">
+                {{ field.errors }}
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required-mark" aria-hidden="true">*</span>{% endif %}</label>
+                {{ field }}
+                {% if field.help_text %}
+                  <small class="helptext">{{ field.help_text }}</small>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <details class="profile-advanced-details" {% if form.errors %}open{% endif %}>
+          <summary class="profile-advanced-toggle">
+            <span class="toggle-icon">▸</span>
+            <span class="toggle-title">Advanced business &amp; brand context</span>
+            <span class="toggle-badge">Optional</span>
+          </summary>
+          <div class="profile-advanced-fields">
+            <p class="muted" style="margin-top: 4px; margin-bottom: 16px;">Fine-tune brand voice, facts, guardrails, and social links.</p>
+            {% for field in form %}
+              {% if field.name not in "revision,name,website,business_type,summary,products,audience" %}
+                <div class="field-wrap">
+                  {{ field.errors }}
+                  <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required-mark" aria-hidden="true">*</span>{% endif %}</label>
+                  {{ field }}
+                  {% if field.help_text %}
+                    <small class="helptext">{{ field.help_text }}</small>
+                  {% endif %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </details>
+
+        {% if can_manage %}
+          <div style="margin-top: 18px;">
+            <button class="button">Save project details</button>
+          </div>
+        {% endif %}
+      </fieldset>
+    </form>
+  </section>
+
+  <aside class="stack">
+    <section class="panel">
+      <h3>Approve a fixed snapshot</h3>
+      <p>New details do not replace the approved version automatically.</p>
+      {% if can_manage and profile %}
+        <form method="post" action="{% url 'profile_action' project.pk 'approve' %}" class="form-stack">
+          {% csrf_token %}
+          <input type="hidden" name="revision" value="{{ profile.revision }}">
+          <label class="check">
+            <input type="checkbox" name="confirm" required>
+            I checked the saved details and their sources.
+          </label>
+          <button class="button light">Approve saved version</button>
+        </form>
+      {% endif %}
+      {% if approved %}
+        <details>
+          <summary>Approved profile v{{ approved.revision }}</summary>
+          {% for key,value in approved.data.items %}
+            <h4>{{ key|title }}</h4>
+            <p>{{ value }}</p>
+          {% endfor %}
+        </details>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h3>AI usage</h3>
+      <p>{{ requests_used }} requests reserved this month. This allowance is shared across the workspace; it is not a dollar spending guarantee.</p>
+      {% if not ready %}
+        <p>Claude is disabled or not configured. Manual project details still work.</p>
+      {% endif %}
+      {% if can_manage %}
+        <form method="post" action="{% url 'profile_action' project.pk 'settings' %}" class="form-stack">
+          {% csrf_token %}
+          <label>Workspace AI access
+            <select name="enabled">
+              <option value="0" {% if not ai_config.enabled %}selected{% endif %}>Disabled</option>
+              <option value="1" {% if ai_config.enabled %}selected{% endif %}>Enabled</option>
+            </select>
+          </label>
+          <label>Monthly request allowance
+            <input type="number" name="monthly_limit" min="1" value="{{ ai_config.monthly_limit }}">
+          </label>
+          <button class="button light">Save allowance</button>
+        </form>
+      {% endif %}
+    </section>
+  </aside>
+</div>
+
+<style>
+.profile-section-header {
+  margin-bottom: 14px;
+}
+.profile-section-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+.profile-main-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.field-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field-wrap label {
+  font-weight: 500;
+  font-size: 13.5px;
+  color: var(--product-ink, #172329);
+}
+.field-wrap .required-mark {
+  color: #ef4444;
+  font-weight: bold;
+}
+.field-wrap input,
+.field-wrap textarea {
+  width: 100%;
+}
+.field-wrap textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.profile-advanced-details {
+  margin-top: 24px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+.profile-advanced-details[open] {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.profile-advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+}
+.profile-advanced-toggle::-webkit-details-marker {
+  display: none;
+}
+.profile-advanced-toggle .toggle-icon {
+  display: inline-block;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+  color: #64748b;
+}
+.profile-advanced-details[open] .profile-advanced-toggle .toggle-icon {
+  transform: rotate(90deg);
+}
+.profile-advanced-toggle .toggle-title {
+  flex: 1;
+}
+.profile-advanced-toggle .toggle-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+}
+.profile-advanced-fields {
+  padding: 4px 16px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+</style>
+{% endblock %}
