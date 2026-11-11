@@ -53,7 +53,7 @@
       </form>
     </dialog>
   {% endfor %}
-{% endif %}{% include 'portal/pagination.html' with page=blogs %}</section><section class="panel"><h2>Categories</h2>{% if can_edit %}<form class="actions" method="post" action="{% url 'category_create' project.pk %}">{% csrf_token %}<input name="name" required placeholder="Category name" maxlength="255"><button class="button">Add category</button></form>{% endif %}<div class="actions">{% for category in project.categories.all %}<span class="tag">{{ category.name }}{% if can_edit %}<form method="post" action="{% url 'category_delete' project.pk category.pk %}">{% csrf_token %}<button class="text-button" aria-label="Delete {{ category.name }}">×</button></form>{% endif %}</span>{% endfor %}</div></section>{% endif %}{% endblock %}
+{% endif %}{% include 'portal/pagination.html' with page=blogs %}</section><section class="panel"><h2>Categories</h2>{% if can_edit %}<form class="actions" method="post" action="{% url 'category_create' project.pk %}">{% csrf_token %}<input name="name" required placeholder="Category name" maxlength="255"><button class="button">Add category</button></form>{% endif %}<div class="actions">{% for category in project.categories.all %}<span class="tag">{{ category.name }}{% if can_edit %}<form method="post" action="{% url 'category_delete' project.pk category.pk %}">{% csrf_token %}<button class="text-button" aria-label="Delete {{ category.name }}">×</button></form>{% endif %}</span>{% endfor %}</div></section>{% endif %}
 
 
 <style>
@@ -199,3 +199,5 @@ function resetStatusSelect(blogId, prevStatus) {
   }
 }
 </script>
+
+{% endblock %}
