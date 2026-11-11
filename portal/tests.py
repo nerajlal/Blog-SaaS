@@ -630,11 +630,11 @@ class PortalTests(TestCase):
 
     def test_blogs_screen_excludes_integration(self):
         result = self.client.get(reverse("project", args=[self.project.pk]))
-        self.assertContains(result, "Your stories")
+        self.assertContains(result, "Your posts")
         self.assertNotContains(result, "Project API key")
         result = self.client.get(reverse("integration", args=[self.project.pk]))
         self.assertContains(result, "Project API key")
-        self.assertNotContains(result, "Your stories")
+        self.assertNotContains(result, "Your posts")
 
     def test_create_edit_and_optimistic_conflict(self):
         values = {

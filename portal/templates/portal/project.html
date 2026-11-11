@@ -2,7 +2,7 @@
 {% if integration %}<section class="panel"><h2>Project API key</h2><p>Read-only published content. Never use this key for private draft access.</p><input readonly value="{{ project.api_key }}" aria-label="Project API key"><h3>Integration guide</h3><pre>fetch("{{ request.scheme }}://{{ request.get_host }}/api/v1/projects/blogs", {
   headers: { "X-API-KEY": "{{ project.api_key }}" }
 }).then(response =&gt; response.json())</pre><p>Use page and per_page to paginate (maximum 100). Render sanitized sections and the returned SEO fields on your frontend. Prefix relative media paths with this server’s origin. Your website controls article routes, canonical URLs, and indexing.</p><a href="{% url 'admin_docs' %}">More integration guidance ↗</a></section>
-{% else %}<section class="panel"><div class="hero-row"><h2>Your stories</h2>{% if can_edit %}<div class="actions">{% if has_ai_details %}<a class="button light" href="{% url 'studio' project.pk %}">Create with AI ✧</a>{% else %}<button type="button" class="button light" data-open-dialog="ai-project-details">Create with AI ✧</button><dialog id="ai-project-details" class="modal" aria-labelledby="ai-project-details-title"><button type="button" class="modal-close" data-close-dialog aria-label="Close">×</button><span class="ai-badge">Better context, better suggestions</span><h2 id="ai-project-details-title">Tell our AI about your business first</h2><p>Add your website, products or services, audience, and brand voice so AI can create content tailored to your business. Save and approve your project details before creating with AI.</p><div class="actions"><button type="button" class="button light" data-close-dialog>Maybe later</button><a class="button" href="{% url 'profile' project.pk %}">Tell AI about your project</a></div></dialog>{% endif %}<a class="button" href="{% url 'create_blog' project.pk %}">New story ＋</a></div>{% endif %}</div><div class="table-scroll"><table><thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{% for blog in blogs %}<tr><td><strong>{{ blog.title }}</strong><small>{{ blog.author_name|default:blog.user.first_name }}</small><div class="story-social-actions" aria-label="Social versions for {{ blog.title }}">
+{% else %}<section class="panel"><div class="hero-row"><h2>Your posts</h2>{% if can_edit %}<div class="actions">{% if has_ai_details %}<a class="button light" href="{% url 'studio' project.pk %}">Create with AI ✧</a>{% else %}<button type="button" class="button light" data-open-dialog="ai-project-details">Create with AI ✧</button><dialog id="ai-project-details" class="modal" aria-labelledby="ai-project-details-title"><button type="button" class="modal-close" data-close-dialog aria-label="Close">×</button><span class="ai-badge">Better context, better suggestions</span><h2 id="ai-project-details-title">Tell our AI about your business first</h2><p>Add your website, products or services, audience, and brand voice so AI can create content tailored to your business. Save and approve your project details before creating with AI.</p><div class="actions"><button type="button" class="button light" data-close-dialog>Maybe later</button><a class="button" href="{% url 'profile' project.pk %}">Tell AI about your project</a></div></dialog>{% endif %}<a class="button" href="{% url 'create_blog' project.pk %}">New post ＋</a></div>{% endif %}</div><div class="table-scroll"><table><thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody>{% for blog in blogs %}<tr><td><strong>{{ blog.title }}</strong><small>{{ blog.author_name|default:blog.user.first_name }}</small><div class="story-social-actions" aria-label="Social versions for {{ blog.title }}">
 <form method="post" action="{% url 'social_version' project.pk blog.pk 'linkedin' %}">{% csrf_token %}<input type="hidden" name="request_key" value="{% new_request_key %}"><button class="social-version social-icon linkedin" type="submit" aria-label="LinkedIn version" title="LinkedIn version"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5.4 8.4H2.1V22h3.3V8.4ZM3.7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM22 13.6c0-4.1-4.4-5.1-6.3-2.6V8.4h-3.3V22h3.3v-7.3c0-2.6 3-2.8 3 0V22H22v-8.4Z"/></svg></button></form>
 <form method="post" action="{% url 'social_version' project.pk blog.pk 'reddit' %}">{% csrf_token %}<input type="hidden" name="request_key" value="{% new_request_key %}"><button class="social-version social-icon reddit" type="submit" aria-label="Reddit version" title="Reddit version"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m13 10 2-7 5 1"/><circle cx="21" cy="4" r="1.5"/><ellipse cx="12" cy="15" rx="9" ry="6"/><path d="M4 12a2.5 2.5 0 1 0-2 3m18-3a2.5 2.5 0 1 1 2 3M8 17c2.5 2 5.5 2 8 0"/><circle cx="8" cy="14" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="14" r="1" fill="currentColor" stroke="none"/></svg></button></form>
 <form method="post" action="{% url 'social_version' project.pk blog.pk 'facebook' %}">{% csrf_token %}<input type="hidden" name="request_key" value="{% new_request_key %}"><button class="social-version social-icon facebook" type="submit" aria-label="Facebook version" title="Facebook version"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14.2 22v-9h3l.5-3.5h-3.5V7.2c0-1 .3-1.7 1.7-1.7H18V2.3c-.4-.1-1.6-.3-2.9-.3-2.8 0-4.8 1.7-4.8 4.9v2.6H7V13h3.3v9h3.9Z"/></svg></button></form>
@@ -40,16 +40,16 @@
     </a>
 
     {% if can_edit %}
-      <a href="{% url 'edit_blog' blog.pk %}" class="post-icon-btn edit-btn" title="Edit story" aria-label="Edit {{ blog.title }}">
+      <a href="{% url 'edit_blog' blog.pk %}" class="post-icon-btn edit-btn" title="Edit post" aria-label="Edit {{ blog.title }}">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
       </a>
 
-      <button type="button" class="post-icon-btn delete-btn" data-open-dialog="blog-delete-{{ blog.pk }}" title="Delete story" aria-label="Delete {{ blog.title }}">
+      <button type="button" class="post-icon-btn delete-btn" data-open-dialog="blog-delete-{{ blog.pk }}" title="Delete post" aria-label="Delete {{ blog.title }}">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
       </button>
 
       <details class="move-dropdown">
-        <summary class="post-icon-btn move-btn" title="Move story to another project">
+        <summary class="post-icon-btn move-btn" title="Move post to another project">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
         </summary>
         <div class="move-menu-panel">
@@ -73,31 +73,31 @@
                 {% endfor %}
               </select>
             </label>
-            <button class="button small" style="margin-top: 8px; width: 100%;">Move story</button>
+            <button class="button small" style="margin-top: 8px; width: 100%;">Move post</button>
           </form>
         </div>
       </details>
     {% endif %}
   </div>
-</td></tr>{% empty %}<tr><td colspan="5">Your next chapter starts here. Write your first story.</td></tr>{% endfor %}</tbody></table></div>
+</td></tr>{% empty %}<tr><td colspan="5">Your next chapter starts here. Write your first post.</td></tr>{% endfor %}</tbody></table></div>
 {% if can_edit %}
   {% for blog in blogs %}
     <dialog class="modal" id="blog-delete-{{ blog.pk }}">
       <button class="modal-close" data-close-dialog aria-label="Close">×</button>
       <h2>Delete {{ blog.title }}?</h2>
-      <p class="muted" style="margin-top: -6px; margin-bottom: 20px;">Permanently delete this story. This action cannot be undone.</p>
+      <p class="muted" style="margin-top: -6px; margin-bottom: 20px;">Permanently delete this post. This action cannot be undone.</p>
       <form method="post" action="{% url 'blog_action' blog.pk 'delete' %}" class="form-stack">
         {% csrf_token %}
         <div class="actions" style="display:flex; justify-content: flex-end; gap: 10px;">
           <button type="button" data-close-dialog class="button light">Cancel</button>
-          <button class="button danger">Delete story</button>
+          <button class="button danger">Delete post</button>
         </div>
       </form>
     </dialog>
     <dialog id="schedule-modal-{{ blog.pk }}" class="modal schedule-modal">
       <button class="modal-close" data-close-dialog aria-label="Close" onclick="resetStatusSelect('{{ blog.pk }}', '{{ blog.status }}')">×</button>
       <h3>Schedule publication</h3>
-      <p class="muted" style="margin-top: -6px; margin-bottom: 18px;">Set the date and time when this story goes live.</p>
+      <p class="muted" style="margin-top: -6px; margin-bottom: 18px;">Set the date and time when this post goes live.</p>
       <form method="post" action="{% url 'blog_action' blog.pk 'status' %}" class="form-stack">
         {% csrf_token %}
         <input type="hidden" name="status" value="scheduled">
