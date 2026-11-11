@@ -79,11 +79,133 @@ def sign_in(request):
         auth_login(request, form.get_user())
         request.session.set_expiry(1209600 if request.POST.get("remember") else 0)
         return redirect("superadmin" if request.user.is_superuser else "projects")
+    google_configured = bool(settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET)
     return render(
         request,
         "portal/auth.html",
-        {"form": form, "title": "Welcome back.", "mode": "login"},
+        {
+            "form": form,
+            "title": "Welcome back.",
+            "mode": "login",
+            "google_configured": google_configured,
+        },
     )
+
+
+def google_auth_start(request):
+    if request.user.is_authenticated:
+        return redirect("projects")
+    if not (settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET):
+        raise ValidationError("Google Login is not configured yet.")
+    rate_limit(request, "google-login", 10, 60)
+    redirect_uri = getattr(settings, "GOOGLE_AUTH_REDIRECT_URI", "") or request.build_absolute_uri(reverse("google_auth_callback"))
+    state = secrets.token_urlsafe(24)
+    verifier = secrets.token_urlsafe(32)
+    challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+        .decode()
+        .rstrip("=")
+    )
+    request.session["google_login_oauth"] = {
+        "state": state,
+        "verifier": verifier,
+        "time": timezone.now().timestamp(),
+        "redirect_uri": redirect_uri,
+    }
+    params = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+        "access_type": "online",
+        "prompt": "select_account",
+    }
+    return redirect("https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params))
+
+
+def google_auth_callback(request):
+    flow = request.session.pop("google_login_oauth", None)
+    state = request.GET.get("state", "")
+    code = request.GET.get("code", "")
+    if (
+        not flow
+        or not secrets.compare_digest(str(flow["state"]), state)
+        or timezone.now().timestamp() - flow.get("time", 0) > 600
+        or not code
+    ):
+        raise ValidationError("Google login session expired or state did not match. Please try again.")
+
+    token_resp = requests.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "redirect_uri": flow["redirect_uri"],
+            "grant_type": "authorization_code",
+            "code": code,
+            "code_verifier": flow["verifier"],
+        },
+        timeout=15,
+    )
+    if not token_resp.ok:
+        raise ValidationError("Could not exchange authentication token with Google.")
+    token_data = token_resp.json()
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise ValidationError("Google authentication failed to return an access token.")
+
+    userinfo_resp = requests.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=15,
+    )
+    if not userinfo_resp.ok:
+        raise ValidationError("Failed to fetch user information from Google.")
+    profile = userinfo_resp.json()
+
+    email = (profile.get("email") or "").strip().lower()
+    email_verified = profile.get("email_verified", False)
+    if not email or not email_verified:
+        raise ValidationError("Your Google account must have a verified email address to log in.")
+
+    user = User.objects.filter(email__iexact=email).first()
+    if not user:
+        given_name = (profile.get("given_name") or "").strip()
+        family_name = (profile.get("family_name") or "").strip()
+        full_name = (profile.get("name") or "").strip()
+        base_username = email.split("@")[0][:30] or "user"
+        username = base_username
+        suffix = 1
+        while User.objects.filter(username__iexact=username).exists():
+            username = f"{base_username}_{suffix}"
+            suffix += 1
+
+        with transaction.atomic():
+            user = User.objects.create(
+                username=username,
+                email=email,
+                first_name=given_name or full_name,
+                last_name=family_name,
+            )
+            user.set_unusable_password()
+            user.save()
+            ws_name = f"{given_name or user.username}'s Workspace"
+            ws = Workspace.objects.create(
+                owner=user,
+                name=ws_name,
+                slug=uuid.uuid4().hex,
+            )
+            Membership.objects.create(workspace=ws, user=user, role="owner")
+            user.current_workspace = ws
+            user.save()
+    elif not user.is_active:
+        raise ValidationError("This account is inactive.")
+
+    auth_login(request, user)
+    return redirect("superadmin" if user.is_superuser else "projects")
 
 
 def register(request):

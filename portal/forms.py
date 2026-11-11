@@ -9,8 +9,18 @@ from .ai import PROFILE_FIELDS
 
 class LoginForm(AuthenticationForm):
     username = forms.EmailField(
-        label="Email", widget=forms.EmailInput(attrs={"autocomplete": "email"})
+        label="Email",
+        widget=forms.EmailInput(
+            attrs={"autocomplete": "email", "placeholder": "you@example.com"}
+        ),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "password" in self.fields:
+            self.fields["password"].widget.attrs.update(
+                {"placeholder": "••••••••", "autocomplete": "current-password"}
+            )
 
     def clean_username(self):
         return self.cleaned_data["username"].lower()

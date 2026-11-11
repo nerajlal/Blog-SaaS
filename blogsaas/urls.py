@@ -23,6 +23,8 @@ urlpatterns = [
     path("docs", v.home, name="docs"),
     path("admin/docs", v.admin_docs, name="admin_docs"),
     path("login", v.sign_in, name="login"),
+    path("login/google", v.google_auth_start, name="google_auth_start"),
+    path("login/google/callback", v.google_auth_callback, name="google_auth_callback"),
     path("register", v.register, name="register"),
     path("logout", v.sign_out, name="logout"),
     path(

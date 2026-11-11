@@ -117,3 +117,24 @@ python manage.py createsuperuser
 - Keep `.local/secret-key` stable; existing encrypted local data depends on it unless a separate encryption key was configured.
 - PHP, Composer, npm, and XAMPP services are not required to run this Django version.
 - These commands are for local development. For the DigitalOcean server, use [Django migration and deployment](docs/django-migration.md).
+
+
+
+
+
+
+
+
+
+
+cd /var/www/Blog-SaaS
+umask 022
+git pull --ff-only origin main
+
+.venv/bin/python manage.py collectstatic --noinput
+
+chown -R www-data:www-data .local/static
+systemctl restart blogsaas-web blogsaas-worker
+
+systemctl status blogsaas-web blogsaas-worker --no-pager
+curl -I https://blogsaas.task19.com/login

@@ -1612,3 +1612,45 @@ class SeoQualityTests(TestCase):
             ai.validate_result("draft", new, strict=True)["focus_keyphrase"],
             "fresh perfume",
         )
+
+    @override_settings(GOOGLE_CLIENT_ID="mock-id", GOOGLE_CLIENT_SECRET="mock-secret")
+    def test_google_login_flow(self):
+        # 1. Login page displays google login button for unauthenticated users
+        self.client.logout()
+        resp = self.client.get(reverse("login"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Continue with Google")
+        self.assertContains(resp, reverse("google_auth_start"))
+
+        # 2. Starting Google auth redirects to Google with state
+        resp = self.client.get(reverse("google_auth_start"))
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(resp["Location"].startswith("https://accounts.google.com/o/oauth2/v2/auth"))
+        session = self.client.session
+        flow = session.get("google_login_oauth")
+        self.assertIsNotNone(flow)
+        self.assertIn("state", flow)
+
+        # 3. Callback creates new user and workspace on successful OAuth
+        with patch("requests.post") as mock_post, patch("requests.get") as mock_get:
+            mock_post.return_value = Mock(ok=True, status_code=200, json=lambda: {"access_token": "ya29.mock_token"})
+            mock_get.return_value = Mock(
+                ok=True,
+                status_code=200,
+                json=lambda: {
+                    "email": "newgoogleuser@example.com",
+                    "email_verified": True,
+                    "given_name": "Google",
+                    "family_name": "Tester",
+                    "name": "Google Tester",
+                },
+            )
+            callback_resp = self.client.get(
+                reverse("google_auth_callback"),
+                {"state": flow["state"], "code": "mock-auth-code"},
+            )
+            self.assertRedirects(callback_resp, reverse("projects"))
+            created_user = User.objects.get(email="newgoogleuser@example.com")
+            self.assertEqual(created_user.first_name, "Google")
+            self.assertIsNotNone(created_user.current_workspace)
+            self.assertTrue(Membership.objects.filter(user=created_user, role="owner").exists())
