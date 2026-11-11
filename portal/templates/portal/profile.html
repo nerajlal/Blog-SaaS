@@ -10,13 +10,15 @@
   <a class="button" href="{% url 'studio' project.pk %}">AI studio ✧</a>
 </section>
 
-<div class="notice">
-  {% if approved %}
-    AI uses approved profile v{{ approved.revision }}.{% if profile.revision != approved.revision %} Draft changes need review.{% endif %}
-  {% else %}
-    Save and approve your project details before AI writing.
-  {% endif %}
-</div>
+{% if approved %}
+  <div class="notice">
+    ✓ AI profile is active (v{{ approved.revision }}). Changes save directly and take effect immediately.
+  </div>
+{% else %}
+  <div class="notice">
+    Save your project details below to activate AI writing tailored to your business.
+  </div>
+{% endif %}
 
 <div class="two-columns">
   <div class="profile-forms-column">
@@ -95,36 +97,41 @@
   </div>
 
   <aside class="stack">
-    <section class="panel">
-      <h3>Approve a fixed snapshot</h3>
-      <p>New details do not replace the approved version automatically.</p>
-      {% if can_manage and profile %}
-        <form method="post" action="{% url 'profile_action' project.pk 'approve' %}" class="form-stack">
-          {% csrf_token %}
-          <input type="hidden" name="revision" value="{{ profile.revision }}">
-          <label class="check">
-            <input type="checkbox" name="confirm" required>
-            I checked the saved details and their sources.
-          </label>
-          <button class="button light">Approve saved version</button>
-        </form>
-      {% endif %}
+    <!-- Active AI Profile Status Card -->
+    <section class="panel ai-status-panel">
+      <div class="ai-status-header">
+        <span class="ai-status-dot {% if approved %}active{% else %}inactive{% endif %}"></span>
+        <h3>AI Profile Status</h3>
+      </div>
       {% if approved %}
-        <details>
-          <summary>Approved profile v{{ approved.revision }}</summary>
-          {% for key,value in approved.data.items %}
-            <h4>{{ key|title }}</h4>
-            <p>{{ value }}</p>
-          {% endfor %}
+        <p class="ai-status-summary">
+          <strong>Active (v{{ approved.revision }})</strong> · Ready for AI writing &amp; suggestions.
+        </p>
+        <div style="margin-top: 14px;">
+          <a class="button light full-width-btn" href="{% url 'studio' project.pk %}">Open AI Studio ✧</a>
+        </div>
+        <details class="approved-snapshot-details" style="margin-top: 16px;">
+          <summary>View saved details snapshot</summary>
+          <div class="approved-snapshot-body">
+            {% for key,value in approved.data.items %}
+              <h4>{{ key|title }}</h4>
+              <p>{{ value }}</p>
+            {% endfor %}
+          </div>
         </details>
+      {% else %}
+        <p class="ai-status-summary muted">
+          No profile saved yet. Complete the essential details and click save to activate AI.
+        </p>
       {% endif %}
     </section>
 
+    <!-- Workspace AI Usage Card -->
     <section class="panel">
-      <h3>AI usage</h3>
-      <p>{{ requests_used }} requests reserved this month. This allowance is shared across the workspace; it is not a dollar spending guarantee.</p>
+      <h3>AI usage &amp; quota</h3>
+      <p><strong>{{ requests_used }}</strong> requests used this month. Allowance is shared across workspace projects.</p>
       {% if not ready %}
-        <p>Claude is disabled or not configured. Manual project details still work.</p>
+        <p class="muted" style="color: #ef4444;">Claude API key is not configured. Manual blog writing is unaffected.</p>
       {% endif %}
       {% if can_manage %}
         <form method="post" action="{% url 'profile_action' project.pk 'settings' %}" class="form-stack">
@@ -242,6 +249,65 @@
 .profile-submit-bar {
   margin-top: 4px;
   margin-bottom: 24px;
+}
+.ai-status-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ai-status-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.ai-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.ai-status-dot.active {
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+.ai-status-dot.inactive {
+  background: #94a3b8;
+}
+.ai-status-summary {
+  margin: 0;
+  font-size: 13.5px;
+  color: #334155;
+}
+.full-width-btn {
+  display: block;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+.approved-snapshot-details {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+}
+.approved-snapshot-details summary {
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+  font-weight: 500;
+}
+.approved-snapshot-body {
+  margin-top: 10px;
+  font-size: 12.5px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.approved-snapshot-body h4 {
+  font-size: 12px;
+  margin: 8px 0 2px 0;
+  color: #475569;
+}
+.approved-snapshot-body p {
+  margin: 0 0 6px 0;
+  color: #64748b;
 }
 </style>
 {% endblock %}

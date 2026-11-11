@@ -650,17 +650,30 @@ def profile(request, pk):
                 values = {
                     k: v for k, v in form.cleaned_data.items() if k in ai.PROFILE_FIELDS
                 }
-                AiProfile.objects.update_or_create(
+                new_revision = (current.revision if current else 0) + 1
+                ai_profile, _ = AiProfile.objects.update_or_create(
                     project=project,
                     defaults={
                         "data": values,
-                        "revision": (current.revision if current else 0) + 1,
+                        "revision": new_revision,
                     },
                 )
-                messages.success(
-                    request,
-                    "Details saved. Review and approve this version before AI uses it.",
-                )
+                if all(values.get(k) for k in ["name", "summary", "audience"]):
+                    AiProfileVersion.objects.create(
+                        project=project,
+                        revision=new_revision,
+                        data=values,
+                        approved_by=request.user,
+                    )
+                    messages.success(
+                        request,
+                        "Project details saved and activated for AI writing.",
+                    )
+                else:
+                    messages.success(
+                        request,
+                        "Project details saved.",
+                    )
                 return redirect("profile", pk=pk)
     config, _ = AiSettings.objects.get_or_create(scope=ai.scope(project))
     return render(

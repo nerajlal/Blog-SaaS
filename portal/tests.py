@@ -864,7 +864,7 @@ class PortalTests(TestCase):
             302,
         )
         self.assertEqual(
-            ai.approved(self.project).data["summary"], "A sample perfume shop"
+            ai.approved(self.project).data["summary"], "New business facts"
         )
         self.assertEqual(
             self.client.post(
