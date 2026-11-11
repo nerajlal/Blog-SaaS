@@ -8,7 +8,7 @@
     <p class="muted">A little inspiration. A lot of possibility. Let’s make something worth reading.</p>
   </div>
   {% if can_create %}
-    <a href="#new-project" class="button">New project ＋</a>
+    <button type="button" class="button" data-open-dialog="create-project-modal">New project ＋</button>
   {% endif %}
 </section>
 
@@ -110,16 +110,23 @@
   {% empty %}
     <p>No projects yet. Make room for your first idea.</p>
   {% endfor %}
-
-  {% if can_create %}
-    <form class="project-card form-stack" method="post" id="new-project">
-      {% csrf_token %}
-      <h4>Make room for something new.</h4>
-      {{ form.as_p }}
-      <button class="button">Create project ↗</button>
-    </form>
-  {% endif %}
 </div>
+
+{% if can_create %}
+  <dialog id="create-project-modal" class="modal create-project-modal">
+    <button class="modal-close" data-close-dialog aria-label="Close">×</button>
+    <h2>Create new project</h2>
+    <p class="muted" style="margin-top: -6px; margin-bottom: 20px;">Make room for something new and start your publication.</p>
+    <form method="post" action="{% url 'projects' %}" class="form-stack">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div class="actions" style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="button light" data-close-dialog>Cancel</button>
+        <button type="submit" class="button">Create project ↗</button>
+      </div>
+    </form>
+  </dialog>
+{% endif %}
 
 {% include 'portal/pagination.html' with page=projects %}
 
@@ -169,6 +176,9 @@
 }
 .project-action-posts:active {
   transform: translateY(0) !important;
+}
+.create-project-modal {
+  width: min(500px, calc(100vw - 32px));
 }
 </style>
 {% endblock %}
