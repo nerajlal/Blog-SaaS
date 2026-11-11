@@ -19,47 +19,28 @@
 </div>
 
 <div class="two-columns">
-  <section class="panel">
-    <h2>Your business, in your words.</h2>
+  <div class="profile-forms-column">
     <form method="post" class="form-stack">
       {% csrf_token %}
       <fieldset {% if not can_manage %}disabled{% endif %}>
         {{ form.non_field_errors }}
         {{ form.revision }}
 
-        <div class="profile-main-fields">
+        <!-- Div 1: Essential details (First 6 fields) -->
+        <div class="panel profile-section-card">
           <div class="profile-section-header">
-            <h3>Essential details</h3>
-            <p class="muted">Core identity and context used across all AI generations.</p>
+            <h2>Essential details</h2>
+            <p class="muted">Core business identity and context used for all AI drafts.</p>
           </div>
 
-          {% for field in form %}
-            {% if field.name in "name,website,business_type,summary,products,audience" %}
-              <div class="field-wrap">
-                {{ field.errors }}
-                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required-mark" aria-hidden="true">*</span>{% endif %}</label>
-                {{ field }}
-                {% if field.help_text %}
-                  <small class="helptext">{{ field.help_text }}</small>
-                {% endif %}
-              </div>
-            {% endif %}
-          {% endfor %}
-        </div>
-
-        <details class="profile-advanced-details" {% if form.errors %}open{% endif %}>
-          <summary class="profile-advanced-toggle">
-            <span class="toggle-icon">▸</span>
-            <span class="toggle-title">Advanced business &amp; brand context</span>
-            <span class="toggle-badge">Optional</span>
-          </summary>
-          <div class="profile-advanced-fields">
-            <p class="muted" style="margin-top: 4px; margin-bottom: 16px;">Fine-tune brand voice, facts, guardrails, and social links.</p>
+          <div class="profile-fields-list">
             {% for field in form %}
-              {% if field.name not in "revision,name,website,business_type,summary,products,audience" %}
+              {% if field.name in "name,website,business_type,summary,products,audience" %}
                 <div class="field-wrap">
                   {{ field.errors }}
-                  <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="required-mark" aria-hidden="true">*</span>{% endif %}</label>
+                  <label for="{{ field.id_for_label }}">
+                    {{ field.label }}{% if field.field.required %} <span class="required-mark" aria-hidden="true">*</span>{% endif %}
+                  </label>
                   {{ field }}
                   {% if field.help_text %}
                     <small class="helptext">{{ field.help_text }}</small>
@@ -68,16 +49,50 @@
               {% endif %}
             {% endfor %}
           </div>
+        </div>
+
+        <!-- Div 2: Advanced context as collapsible dropdown -->
+        <details class="panel profile-section-card profile-advanced-details" {% if form.errors %}open{% endif %}>
+          <summary class="profile-advanced-toggle">
+            <div class="profile-toggle-left">
+              <span class="toggle-icon">▸</span>
+              <span class="toggle-title">Advanced business &amp; brand context</span>
+            </div>
+            <span class="optional-pill">Optional</span>
+          </summary>
+
+          <div class="profile-advanced-content">
+            <p class="muted" style="margin-top: 4px; margin-bottom: 18px;">
+              Fine-tune brand voice, facts, guardrails, and official social links.
+            </p>
+            <div class="profile-fields-list">
+              {% for field in form %}
+                {% if field.name not in "revision,name,website,business_type,summary,products,audience" %}
+                  <div class="field-wrap">
+                    {{ field.errors }}
+                    <label for="{{ field.id_for_label }}">
+                      {{ field.label }}{% if field.field.required %} <span class="required-mark" aria-hidden="true">*</span>{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}
+                      <small class="helptext">{{ field.help_text }}</small>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
         </details>
 
+        <!-- Save Button: OUTSIDE the dropdown -->
         {% if can_manage %}
-          <div style="margin-top: 18px;">
+          <div class="profile-submit-bar">
             <button class="button">Save project details</button>
           </div>
         {% endif %}
       </fieldset>
     </form>
-  </section>
+  </div>
 
   <aside class="stack">
     <section class="panel">
@@ -131,15 +146,73 @@
 </div>
 
 <style>
-.profile-section-header {
-  margin-bottom: 14px;
+.profile-forms-column {
+  display: flex;
+  flex-direction: column;
 }
-.profile-section-header h3 {
-  font-size: 16px;
+.profile-section-card {
+  margin-bottom: 24px;
+}
+.profile-section-header {
+  margin-bottom: 18px;
+}
+.profile-section-header h2 {
+  font-size: 19px;
   font-weight: 600;
   margin: 0 0 4px 0;
 }
-.profile-main-fields {
+.profile-advanced-details {
+  border-top: 3px solid #6366f1 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+.profile-advanced-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--product-ink, #172329);
+  outline: none;
+  list-style: none;
+}
+.profile-advanced-toggle::-webkit-details-marker {
+  display: none;
+}
+.profile-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.profile-advanced-toggle .toggle-icon {
+  display: inline-block;
+  font-size: 13px;
+  transition: transform 0.2s ease;
+  color: #6366f1;
+}
+.profile-advanced-details[open] .profile-advanced-toggle .toggle-icon {
+  transform: rotate(90deg);
+}
+.optional-pill {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+.profile-advanced-content {
+  padding: 0 24px 24px 24px;
+  border-top: 1px solid #f1f5f9;
+}
+.profile-fields-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -163,63 +236,12 @@
   width: 100%;
 }
 .field-wrap textarea {
-  min-height: 80px;
+  min-height: 85px;
   resize: vertical;
 }
-.profile-advanced-details {
-  margin-top: 24px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #f9fafb;
-  overflow: hidden;
-  transition: all 0.2s ease;
-}
-.profile-advanced-details[open] {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-.profile-advanced-toggle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  cursor: pointer;
-  user-select: none;
-  font-weight: 600;
-  font-size: 14px;
-  color: #1e293b;
-  outline: none;
-}
-.profile-advanced-toggle::-webkit-details-marker {
-  display: none;
-}
-.profile-advanced-toggle .toggle-icon {
-  display: inline-block;
-  font-size: 12px;
-  transition: transform 0.2s ease;
-  color: #64748b;
-}
-.profile-advanced-details[open] .profile-advanced-toggle .toggle-icon {
-  transform: rotate(90deg);
-}
-.profile-advanced-toggle .toggle-title {
-  flex: 1;
-}
-.profile-advanced-toggle .toggle-badge {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #e2e8f0;
-  color: #475569;
-}
-.profile-advanced-fields {
-  padding: 4px 16px 18px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  border-top: 1px solid #f1f5f9;
+.profile-submit-bar {
+  margin-top: 4px;
+  margin-bottom: 24px;
 }
 </style>
 {% endblock %}
