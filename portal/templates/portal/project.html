@@ -1,4 +1,4 @@
-{% extends 'portal/base.html' %}{% load portal_tags %}{% block heading %}{{ project.name }}{% endblock %}{% block content %}<section class="hero-row"><div><span class="eyebrow">Your publication</span><h1>{{ project.name }}</h1><p class="muted">{{ project.description }}</p></div><div class="actions">{% if not integration %}<a class="button light" href="{% url 'profile' project.pk %}">Tell AI about your project</a>{% endif %}<a class="button light" href="{% if integration %}{% url 'project' project.pk %}{% else %}{% url 'integration' project.pk %}{% endif %}">{% if integration %}Blogs{% else %}Integration{% endif %} ↗</a></div></section>
+{% extends 'portal/base.html' %}{% load portal_tags %}{% block heading %}{{ project.name }}{% endblock %}{% block content %}<section class="hero-row"><div><span class="eyebrow">Your publication</span><h1>{{ project.name }}</h1><p class="muted">{{ project.description }}</p></div><div class="actions">{% if not integration %}<a class="button ai-highlight-button" href="{% url 'profile' project.pk %}"><span class="ai-sparkle">✦</span> Tell AI about your project</a>{% endif %}<a class="button light" href="{% if integration %}{% url 'project' project.pk %}{% else %}{% url 'integration' project.pk %}{% endif %}">{% if integration %}Blogs{% else %}Integration{% endif %} ↗</a></div></section>
 {% if integration %}<section class="panel"><h2>Project API key</h2><p>Read-only published content. Never use this key for private draft access.</p><input readonly value="{{ project.api_key }}" aria-label="Project API key"><h3>Integration guide</h3><pre>fetch("{{ request.scheme }}://{{ request.get_host }}/api/v1/projects/blogs", {
   headers: { "X-API-KEY": "{{ project.api_key }}" }
 }).then(response =&gt; response.json())</pre><p>Use page and per_page to paginate (maximum 100). Render sanitized sections and the returned SEO fields on your frontend. Prefix relative media paths with this server’s origin. Your website controls article routes, canonical URLs, and indexing.</p><a href="{% url 'admin_docs' %}">More integration guidance ↗</a></section>
@@ -313,6 +313,34 @@
   width: 240px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.1);
   text-align: left;
+}
+
+.ai-highlight-button {
+  background: linear-gradient(135deg, #2862f4 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 3px 12px rgba(40, 98, 244, 0.32) !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  transition: all 0.2s ease !important;
+}
+.ai-highlight-button:hover {
+  background: linear-gradient(135deg, #1c52db 0%, #4f46e5 100%) !important;
+  box-shadow: 0 5px 16px rgba(40, 98, 244, 0.42) !important;
+  transform: translateY(-1px);
+  color: #ffffff !important;
+}
+.ai-highlight-button .ai-sparkle {
+  color: #ffd700;
+  font-size: 1.05em;
+  display: inline-block;
+  animation: sparkle-pulse 2s infinite ease-in-out;
+}
+@keyframes sparkle-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.85; }
 }
 </style>
 
