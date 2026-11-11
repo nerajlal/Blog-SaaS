@@ -1,3 +1,174 @@
-{% extends 'portal/base.html' %}{% block heading %}Your workspace / Projects{% endblock %}{% block content %}<section class="hero-row"><div><span class="eyebrow">{{ workspace.name }}</span><h1>Your ideas, in motion.</h1><p class="muted">A little inspiration. A lot of possibility. Let’s make something worth reading.</p></div>{% if can_create %}<a href="#new-project" class="button">New project ＋</a>{% endif %}</section><div class="metrics">{% for label,value in stats.items %}<div><small>{{ label }}</small><strong>{{ value }}</strong></div>{% endfor %}</div><h3>A place for every project.</h3><div class="project-grid">{% for project in projects %}<article class="project-card"><div class="project-card-top"><span class="project-card-icon palette-1">{{ project.name|first }}</span><small>Your publication</small></div><div class="project-title-row"><h4><a href="{% url 'project' project.pk %}" {% if not project.has_profile %}data-profile-prompt="profile-{{ project.pk }}"{% endif %}>{{ project.name }}</a></h4>{% if project.manage %}<button type="button" class="project-trash-button" data-open-dialog="delete-{{ project.pk }}" aria-label="Delete project: {{ project.name }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg></button>{% endif %}</div><p class="project-card-description">{{ project.description|default:'Your next chapter starts here.' }}</p><div class="project-card-bottom"><span>{{ project.blogs_count }} stories · Updated {{ project.updated_at|timesince }} ago</span></div><a class="project-details-link" href="{% url 'profile' project.pk %}">Project details <small>{{ project.profile_state }} ↗</small></a><div class="project-card-actions"><a class="project-action project-action-primary" href="{% url 'project' project.pk %}" {% if not project.has_profile %}data-profile-prompt="profile-{{ project.pk }}"{% endif %}>▤ Blogs</a><a class="project-action project-action-secondary" href="{% url 'integration' project.pk %}">⌘ Integration</a></div>
-{% if project.manage %}<dialog id="delete-{{ project.pk }}" class="modal"><h2>Delete project?</h2><p>Permanently delete {{ project.name }}, its stories and project data. This cannot be undone.</p><form method="post" action="{% url 'project_delete' project.pk %}" class="form-stack">{% csrf_token %}<label>Type {{ project.name }} to confirm<input name="project_name" required></label><div class="actions"><button type="button" class="button light" data-close-dialog>Cancel</button><button class="button danger">Delete project</button></div></form></dialog>{% endif %}
-{% if not project.has_profile %}<dialog id="profile-{{ project.pk }}" class="modal profile-prompt"><button class="modal-close" data-close-dialog aria-label="Close and continue">×</button><span class="ai-badge">A little context, better suggestions</span><h2>Tell us about {{ project.name }}</h2><p>Fill in your project details to get AI suggestions tailored to your business, products, and audience. You can keep writing and set this up later.</p><div class="actions"><button class="button light" data-close-dialog>Continue to blogs</button><a class="button" href="{% url 'profile' project.pk %}">{% if project.manage %}Set up project details{% else %}View project details{% endif %}</a></div></dialog>{% endif %}</article>{% empty %}<p>No projects yet. Make room for your first idea.</p>{% endfor %}{% if can_create %}<form class="project-card form-stack" method="post" id="new-project">{% csrf_token %}<h4>Make room for something new.</h4>{{ form.as_p }}<button class="button">Create project ↗</button></form>{% endif %}</div>{% include 'portal/pagination.html' with page=projects %}{% endblock %}
+{% extends 'portal/base.html' %}
+{% block heading %}Your workspace / Projects{% endblock %}
+{% block content %}
+<section class="hero-row">
+  <div>
+    <span class="eyebrow">{{ workspace.name }}</span>
+    <h1>Your ideas, in motion.</h1>
+    <p class="muted">A little inspiration. A lot of possibility. Let’s make something worth reading.</p>
+  </div>
+  {% if can_create %}
+    <a href="#new-project" class="button">New project ＋</a>
+  {% endif %}
+</section>
+
+<div class="metrics">
+  {% for label,value in stats.items %}
+    <div>
+      <small>{{ label }}</small>
+      <strong>{{ value }}</strong>
+    </div>
+  {% endfor %}
+</div>
+
+<h3>A place for every project.</h3>
+
+<div class="project-grid">
+  {% for project in projects %}
+    <article class="project-card">
+      <div class="project-card-top">
+        <span class="project-card-icon palette-1">{{ project.name|first }}</span>
+        <a href="{% url 'integration' project.pk %}" class="project-connect-top-btn" title="Integration & API settings">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          <span>Connect with your site</span>
+        </a>
+      </div>
+
+      <div class="project-title-row">
+        <h4>
+          <a href="{% url 'project' project.pk %}" {% if not project.has_profile %}data-profile-prompt="profile-{{ project.pk }}"{% endif %}>
+            {{ project.name }}
+          </a>
+        </h4>
+        {% if project.manage %}
+          <button type="button" class="project-trash-button" data-open-dialog="delete-{{ project.pk }}" aria-label="Delete project: {{ project.name }}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/>
+            </svg>
+          </button>
+        {% endif %}
+      </div>
+
+      <p class="project-card-description">{{ project.description|default:'Your next chapter starts here.' }}</p>
+
+      <div class="project-card-bottom">
+        <span>{{ project.blogs_count }} stories · Updated {{ project.updated_at|timesince }} ago</span>
+      </div>
+
+      <a class="project-details-link" href="{% url 'profile' project.pk %}">
+        Project details <small>{{ project.profile_state }} ↗</small>
+      </a>
+
+      <div class="project-card-actions">
+        <a class="project-action project-action-posts" href="{% url 'project' project.pk %}" {% if not project.has_profile %}data-profile-prompt="profile-{{ project.pk }}"{% endif %}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Posts</span>
+        </a>
+      </div>
+
+      {% if project.manage %}
+        <dialog id="delete-{{ project.pk }}" class="modal">
+          <h2>Delete project?</h2>
+          <p>Permanently delete {{ project.name }}, its stories and project data. This cannot be undone.</p>
+          <form method="post" action="{% url 'project_delete' project.pk %}" class="form-stack">
+            {% csrf_token %}
+            <label>Type {{ project.name }} to confirm
+              <input name="project_name" required>
+            </label>
+            <div class="actions">
+              <button type="button" class="button light" data-close-dialog>Cancel</button>
+              <button class="button danger">Delete project</button>
+            </div>
+          </form>
+        </dialog>
+      {% endif %}
+
+      {% if not project.has_profile %}
+        <dialog id="profile-{{ project.pk }}" class="modal profile-prompt">
+          <button class="modal-close" data-close-dialog aria-label="Close and continue">×</button>
+          <span class="ai-badge">A little context, better suggestions</span>
+          <h2>Tell us about {{ project.name }}</h2>
+          <p>Fill in your project details to get AI suggestions tailored to your business, products, and audience. You can keep writing and set this up later.</p>
+          <div class="actions">
+            <button class="button light" data-close-dialog>Continue to blogs</button>
+            <a class="button" href="{% url 'profile' project.pk %}">
+              {% if project.manage %}Set up project details{% else %}View project details{% endif %}
+            </a>
+          </div>
+        </dialog>
+      {% endif %}
+    </article>
+  {% empty %}
+    <p>No projects yet. Make room for your first idea.</p>
+  {% endfor %}
+
+  {% if can_create %}
+    <form class="project-card form-stack" method="post" id="new-project">
+      {% csrf_token %}
+      <h4>Make room for something new.</h4>
+      {{ form.as_p }}
+      <button class="button">Create project ↗</button>
+    </form>
+  {% endif %}
+</div>
+
+{% include 'portal/pagination.html' with page=projects %}
+
+<style>
+.project-connect-top-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  background: #f1f6fa;
+  border: 1px solid #dce8ef;
+  border-radius: 999px;
+  color: #496374;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+.project-connect-top-btn:hover {
+  background: #e6eff5;
+  color: #1f3b4d;
+  border-color: #c7dbe7;
+}
+.project-action-posts {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-height: 42px !important;
+  background: #2862f4 !important;
+  border: 1px solid #2862f4 !important;
+  color: #ffffff !important;
+  border-radius: 11px !important;
+  font-size: 13.5px !important;
+  font-weight: 650 !important;
+  text-decoration: none !important;
+  box-shadow: 0 2px 6px rgba(40, 98, 244, 0.22) !important;
+  transition: all 0.18s ease !important;
+  box-sizing: border-box !important;
+}
+.project-action-posts:hover {
+  background: #1c52db !important;
+  border-color: #1c52db !important;
+  box-shadow: 0 4px 12px rgba(40, 98, 244, 0.32) !important;
+  transform: translateY(-1px) !important;
+}
+.project-action-posts:active {
+  transform: translateY(0) !important;
+}
+</style>
+{% endblock %}
