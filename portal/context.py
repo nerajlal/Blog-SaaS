@@ -1,4 +1,4 @@
-from .models import Workspace
+from .models import Workspace, Membership
 from .services import can_access
 
 
@@ -48,6 +48,11 @@ def navigation(request):
     return {
         "sidebar_active": active,
         "workspaces": workspaces,
+        "editable_workspace_ids": set(
+            Membership.objects.filter(
+                user=request.user, role__in=["owner", "admin"]
+            ).values_list("workspace_id", flat=True)
+        ),
         "active_workspace": workspaces.filter(
             pk=request.user.current_workspace_id
         ).first(),

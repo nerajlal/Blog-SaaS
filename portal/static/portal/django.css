@@ -103,3 +103,49 @@
 .seo-check.check-warning{background:#fff9ef;border-color:#f0dfbd;border-left-color:#dfa43a}.check-warning .seo-check-status{background:#f9eacb;color:#855a13}
 .seo-check.check-fail{background:#fff5f5;border-color:#efcece;border-left-color:#d56c6c}.check-fail .seo-check-status{background:#f7dfdf;color:#9a3434}
 .seo-check.check-neutral{background:#f8fafc;border-color:#e2e8ee;border-left-color:#b6c2cd}.check-neutral .seo-check-status{background:#eaf0f5;color:#637586}
+
+/* Reserve space for the mobile menu button after removing the admin top bar. */
+@media(max-width:767px){.workspace-app .workspace-content{padding-top:76px}}
+
+.workspace-name-row{display:flex;align-items:center;gap:5px;margin:3px 0}.workspace-name-row>form{flex:1;min-width:0}.workspace-name-row .workspace-choice{width:100%;text-align:left;overflow-wrap:anywhere}.workspace-rename-button{display:grid;place-items:center;flex-shrink:0;width:29px;height:29px;background:transparent;border:1px solid transparent;border-radius:7px;color:#8a9bab;cursor:pointer}.workspace-rename-button:hover{color:#3975ed;background:#edf3ff;border-color:#e0e9f5}
+
+/* Compact workspace switcher with aligned rename controls. */
+.workspace-app .workspace-picker{padding:12px 10px}
+.workspace-app .workspace-picker>small{display:block;font-size:10px;margin-bottom:7px}
+.workspace-app .workspace-name-row{margin:0;gap:5px;min-height:30px}
+.workspace-app .workspace-name-row>form{margin:0;padding:0}
+.workspace-app .workspace-name-row .workspace-choice{padding:5px 0;line-height:1.5;min-height:30px}
+.workspace-app .workspace-rename-button{width:26px;height:26px}
+.workspace-app .workspace-picker>details{margin:7px 0 0}
+.workspace-app .workspace-picker>details>summary{padding:3px 0;line-height:1.5;font-size:12px}
+
+/* Shared AI action appearance across project pages and setup popups. */
+.ai-highlight-button {
+  background: linear-gradient(135deg, #2862f4 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 3px 12px rgba(40, 98, 244, 0.32) !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  transition: all 0.2s ease !important;
+}
+.ai-highlight-button:hover {
+  background: linear-gradient(135deg, #1c52db 0%, #4f46e5 100%) !important;
+  box-shadow: 0 5px 16px rgba(40, 98, 244, 0.42) !important;
+  transform: translateY(-1px);
+  color: #ffffff !important;
+}
+.ai-highlight-button .ai-sparkle {
+  color: #ffd700;
+  font-size: 1.05em;
+  display: inline-block;
+  animation: sparkle-pulse 2s infinite ease-in-out;
+}
+@keyframes sparkle-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.85; }
+}
+
+@media(prefers-reduced-motion:reduce){.ai-highlight-button .ai-sparkle{animation:none}}

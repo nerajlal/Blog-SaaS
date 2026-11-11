@@ -1831,13 +1831,40 @@ class SeoQualityTests(TestCase):
         self.assertIsNone(response.context["health_summary"]["average_seo"])
         self.assertEqual(SeoAnalysis.objects.filter(blog=self.blog).count(), 1)
 
-
     def test_trywryter_branding_preserves_public_api_paths(self):
         from django.template.loader import render_to_string
+
         self.client.logout()
         for route in ("home", "login"):
             response = self.client.get(reverse(route))
             self.assertContains(response, "TryWryter")
             self.assertNotContains(response, "BlogSaaS")
-        self.assertEqual(render_to_string("portal/reset_subject.txt").strip(), "Reset your TryWryter password")
+        self.assertEqual(
+            render_to_string("portal/reset_subject.txt").strip(),
+            "Reset your TryWryter password",
+        )
         self.assertEqual(reverse("api_blogs"), "/api/v1/projects/blogs")
+
+    def test_workspace_rename_requires_management_role(self):
+        url = reverse("workspace_rename", args=[self.ws.pk])
+        response = self.client.post(url, {"name": "Shopify Apps"})
+        self.assertEqual(response.status_code, 302)
+        self.ws.refresh_from_db()
+        self.assertEqual(self.ws.name, "Shopify Apps")
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.assertEqual(self.client.post(url, {"name": "   "}).status_code, 400)
+        other = User.objects.create_user(
+            username="workspaceeditor@example.com",
+            email="workspaceeditor@example.com",
+            password="GoodPassword492!",
+        )
+        membership = Membership.objects.create(
+            user=other, workspace=self.ws, role="editor"
+        )
+        self.client.force_login(other)
+        self.assertEqual(self.client.post(url, {"name": "Blocked"}).status_code, 403)
+        membership.role = "admin"
+        membership.save()
+        self.assertEqual(self.client.post(url, {"name": "SaaS"}).status_code, 302)
+        self.ws.refresh_from_db()
+        self.assertEqual(self.ws.name, "SaaS")

@@ -55,6 +55,7 @@ urlpatterns = [
         ),
         name="password_reset_complete",
     ),
+    path("workspaces/<int:pk>/rename", v.workspace_rename, name="workspace_rename"),
     path("workspaces", v.workspace_action, name="workspace_create"),
     path("workspaces/<int:pk>/switch", v.workspace_action, name="workspace_switch"),
     path("admin/login", v.sign_in, name="admin_login"),

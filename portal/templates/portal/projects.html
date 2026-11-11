@@ -100,8 +100,8 @@
           <p>Fill in your project details to get AI suggestions tailored to your business, products, and audience. You can keep writing and set this up later.</p>
           <div class="actions">
             <button class="button light" data-close-dialog>Continue to posts</button>
-            <a class="button" href="{% url 'profile' project.pk %}">
-              {% if project.manage %}Set up project details{% else %}View project details{% endif %}
+            <a class="button {% if project.manage %}ai-highlight-button{% endif %}" href="{% url 'profile' project.pk %}">
+              {% if project.manage %}<span class="ai-sparkle" aria-hidden="true">✦</span> Tell AI about your project{% else %}View project details{% endif %}
             </a>
           </div>
         </dialog>

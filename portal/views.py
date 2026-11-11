@@ -294,6 +294,23 @@ def workspace_action(request, pk=None):
 
 
 @page
+@require_POST
+def workspace_rename(request, pk):
+    workspace = get_object_or_404(Workspace, pk=pk)
+    if not Membership.objects.filter(
+        workspace=workspace, user=request.user, role__in=["owner", "admin"]
+    ).exists():
+        raise PermissionDenied
+    name = request.POST.get("name", "").strip()
+    if not name or len(name) > 255:
+        raise ValidationError("Enter a workspace name between 1 and 255 characters.")
+    workspace.name = name
+    workspace.save(update_fields=["name", "updated_at"])
+    messages.success(request, "Workspace renamed.")
+    return redirect("projects")
+
+
+@page
 @require_http_methods(["GET", "POST"])
 def projects(request):
     if request.user.is_superuser:
