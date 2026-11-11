@@ -24,9 +24,19 @@
         </button>
       {% endif %}
     </div>
-
+  {% else %}
+    <span class="status-badge status-{{ blog.status }}">{{ blog.get_status_display }}</span>
+  {% endif %}
+  {% if blog.published_at %}
+    <small class="status-timestamp" {% if blog.status == 'scheduled' %}style="color:#1d4ed8; font-weight:500;"{% endif %}>
+      {% if blog.status == 'scheduled' %}🕒 {% endif %}{{ blog.published_at }}
+    </small>
+  {% endif %}
+</td><td>{{ blog.updated_at|timesince }} ago</td><td><div class="actions"><a href="{% url 'report' blog.pk %}">SEO report</a>{% if can_edit %}<a href="{% url 'edit_blog' blog.pk %}">Edit</a><button type="button" class="text-button" data-open-dialog="blog-delete-{{ blog.pk }}">Delete</button><dialog class="modal" id="blog-delete-{{ blog.pk }}"><h2>Delete {{ blog.title }}?</h2><form method="post" action="{% url 'blog_action' blog.pk 'delete' %}">{% csrf_token %}<div class="actions"><button type="button" data-close-dialog class="button light">Cancel</button><button class="button danger">Delete story</button></div></form></dialog><details><summary>Move story</summary><form method="post" action="{% url 'blog_action' blog.pk 'move' %}">{% csrf_token %}<label>Destination project<select name="target_project_id" data-move-project required><option value="">Choose a project</option>{% for target in movable_projects %}<option value="{{ target.pk }}">{{ target.name }}</option>{% endfor %}</select></label><label>Destination category<select name="category_id" data-move-category><option value="">Uncategorized</option>{% for target in movable_projects %}{% for category in target.categories.all %}<option value="{{ category.pk }}" data-project="{{ target.pk }}" hidden disabled>{{ category.name }}</option>{% endfor %}{% endfor %}</select></label><button class="button small">Move</button></form></details>{% endif %}</div></td></tr>{% empty %}<tr><td colspan="5">Your next chapter starts here. Write your first story.</td></tr>{% endfor %}</tbody></table></div>
+{% if can_edit %}
+  {% for blog in blogs %}
     <dialog id="schedule-modal-{{ blog.pk }}" class="modal schedule-modal">
-      <button class="modal-close" data-close-dialog aria-label="Close">×</button>
+      <button class="modal-close" data-close-dialog aria-label="Close" onclick="resetStatusSelect('{{ blog.pk }}', '{{ blog.status }}')">×</button>
       <h3>Schedule publication</h3>
       <p class="muted" style="margin-top: -6px; margin-bottom: 18px;">Set the date and time when this story goes live.</p>
       <form method="post" action="{% url 'blog_action' blog.pk 'status' %}" class="form-stack">
@@ -42,15 +52,8 @@
         </div>
       </form>
     </dialog>
-  {% else %}
-    <span class="status-badge status-{{ blog.status }}">{{ blog.get_status_display }}</span>
-  {% endif %}
-  {% if blog.published_at %}
-    <small class="status-timestamp" {% if blog.status == 'scheduled' %}style="color:#1d4ed8; font-weight:500;"{% endif %}>
-      {% if blog.status == 'scheduled' %}🕒 {% endif %}{{ blog.published_at }}
-    </small>
-  {% endif %}
-</td><td>{{ blog.updated_at|timesince }} ago</td><td><div class="actions"><a href="{% url 'report' blog.pk %}">SEO report</a>{% if can_edit %}<a href="{% url 'edit_blog' blog.pk %}">Edit</a><button type="button" class="text-button" data-open-dialog="blog-delete-{{ blog.pk }}">Delete</button><dialog class="modal" id="blog-delete-{{ blog.pk }}"><h2>Delete {{ blog.title }}?</h2><form method="post" action="{% url 'blog_action' blog.pk 'delete' %}">{% csrf_token %}<div class="actions"><button type="button" data-close-dialog class="button light">Cancel</button><button class="button danger">Delete story</button></div></form></dialog><details><summary>Move story</summary><form method="post" action="{% url 'blog_action' blog.pk 'move' %}">{% csrf_token %}<label>Destination project<select name="target_project_id" data-move-project required><option value="">Choose a project</option>{% for target in movable_projects %}<option value="{{ target.pk }}">{{ target.name }}</option>{% endfor %}</select></label><label>Destination category<select name="category_id" data-move-category><option value="">Uncategorized</option>{% for target in movable_projects %}{% for category in target.categories.all %}<option value="{{ category.pk }}" data-project="{{ target.pk }}" hidden disabled>{{ category.name }}</option>{% endfor %}{% endfor %}</select></label><button class="button small">Move</button></form></details>{% endif %}</div></td></tr>{% empty %}<tr><td colspan="5">Your next chapter starts here. Write your first story.</td></tr>{% endfor %}</tbody></table></div>{% include 'portal/pagination.html' with page=blogs %}</section><section class="panel"><h2>Categories</h2>{% if can_edit %}<form class="actions" method="post" action="{% url 'category_create' project.pk %}">{% csrf_token %}<input name="name" required placeholder="Category name" maxlength="255"><button class="button">Add category</button></form>{% endif %}<div class="actions">{% for category in project.categories.all %}<span class="tag">{{ category.name }}{% if can_edit %}<form method="post" action="{% url 'category_delete' project.pk category.pk %}">{% csrf_token %}<button class="text-button" aria-label="Delete {{ category.name }}">×</button></form>{% endif %}</span>{% endfor %}</div></section>{% endif %}{% endblock %}
+  {% endfor %}
+{% endif %}{% include 'portal/pagination.html' with page=blogs %}</section><section class="panel"><h2>Categories</h2>{% if can_edit %}<form class="actions" method="post" action="{% url 'category_create' project.pk %}">{% csrf_token %}<input name="name" required placeholder="Category name" maxlength="255"><button class="button">Add category</button></form>{% endif %}<div class="actions">{% for category in project.categories.all %}<span class="tag">{{ category.name }}{% if can_edit %}<form method="post" action="{% url 'category_delete' project.pk category.pk %}">{% csrf_token %}<button class="text-button" aria-label="Delete {{ category.name }}">×</button></form>{% endif %}</span>{% endfor %}</div></section>{% endif %}{% endblock %}
 
 
 <style>
@@ -170,17 +173,29 @@ function handleStatusChange(selectElem) {
   if (newStatus === 'scheduled') {
     var modal = document.getElementById('schedule-modal-' + blogId);
     if (modal) {
+      var submitted = false;
+      var form = modal.querySelector('form');
+      form.onsubmit = function() { submitted = true; };
+      modal.onclose = function() {
+        if (!submitted) {
+          selectElem.value = prevStatus;
+        }
+      };
       modal.showModal();
       return;
     }
   }
-  selectElem.form.submit();
+
+  // Ensure form submits reliably across all browsers
+  if (selectElem.form) {
+    selectElem.form.requestSubmit ? selectElem.form.requestSubmit() : selectElem.form.submit();
+  }
 }
 
 function resetStatusSelect(blogId, prevStatus) {
-  var form = document.getElementById('status-form-blog-' + blogId) || document.querySelector('select[data-blog-id="' + blogId + '"]');
-  if (form) {
-    form.value = prevStatus;
+  var select = document.querySelector('select[data-blog-id="' + blogId + '"]');
+  if (select) {
+    select.value = prevStatus;
   }
 }
 </script>
