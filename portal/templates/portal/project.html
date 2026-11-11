@@ -32,9 +32,68 @@
       {% if blog.status == 'scheduled' %}🕒 {% endif %}{{ blog.published_at }}
     </small>
   {% endif %}
-</td><td>{{ blog.updated_at|timesince }} ago</td><td><div class="actions"><a href="{% url 'report' blog.pk %}">SEO report</a>{% if can_edit %}<a href="{% url 'edit_blog' blog.pk %}">Edit</a><button type="button" class="text-button" data-open-dialog="blog-delete-{{ blog.pk }}">Delete</button><dialog class="modal" id="blog-delete-{{ blog.pk }}"><h2>Delete {{ blog.title }}?</h2><form method="post" action="{% url 'blog_action' blog.pk 'delete' %}">{% csrf_token %}<div class="actions"><button type="button" data-close-dialog class="button light">Cancel</button><button class="button danger">Delete story</button></div></form></dialog><details><summary>Move story</summary><form method="post" action="{% url 'blog_action' blog.pk 'move' %}">{% csrf_token %}<label>Destination project<select name="target_project_id" data-move-project required><option value="">Choose a project</option>{% for target in movable_projects %}<option value="{{ target.pk }}">{{ target.name }}</option>{% endfor %}</select></label><label>Destination category<select name="category_id" data-move-category><option value="">Uncategorized</option>{% for target in movable_projects %}{% for category in target.categories.all %}<option value="{{ category.pk }}" data-project="{{ target.pk }}" hidden disabled>{{ category.name }}</option>{% endfor %}{% endfor %}</select></label><button class="button small">Move</button></form></details>{% endif %}</div></td></tr>{% empty %}<tr><td colspan="5">Your next chapter starts here. Write your first story.</td></tr>{% endfor %}</tbody></table></div>
+</td><td>{{ blog.updated_at|timesince }} ago</td><td class="actions-cell">
+  <div class="post-row-actions">
+    <a href="{% url 'report' blog.pk %}" class="post-action-btn seo-btn" title="SEO report">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <span>SEO</span>
+    </a>
+
+    {% if can_edit %}
+      <a href="{% url 'edit_blog' blog.pk %}" class="post-icon-btn edit-btn" title="Edit story" aria-label="Edit {{ blog.title }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+      </a>
+
+      <button type="button" class="post-icon-btn delete-btn" data-open-dialog="blog-delete-{{ blog.pk }}" title="Delete story" aria-label="Delete {{ blog.title }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+      </button>
+
+      <details class="move-dropdown">
+        <summary class="post-icon-btn move-btn" title="Move story to another project">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+        </summary>
+        <div class="move-menu-panel">
+          <form method="post" action="{% url 'blog_action' blog.pk 'move' %}" class="form-stack">
+            {% csrf_token %}
+            <label style="font-size: 11.5px; font-weight:600;">Destination project
+              <select name="target_project_id" data-move-project required style="padding: 5px 8px; font-size: 12px; margin-top: 4px;">
+                <option value="">Choose a project</option>
+                {% for target in movable_projects %}
+                  <option value="{{ target.pk }}">{{ target.name }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label style="font-size: 11.5px; font-weight:600; margin-top: 8px;">Destination category
+              <select name="category_id" data-move-category style="padding: 5px 8px; font-size: 12px; margin-top: 4px;">
+                <option value="">Uncategorized</option>
+                {% for target in movable_projects %}
+                  {% for category in target.categories.all %}
+                    <option value="{{ category.pk }}" data-project="{{ target.pk }}" hidden disabled>{{ category.name }}</option>
+                  {% endfor %}
+                {% endfor %}
+              </select>
+            </label>
+            <button class="button small" style="margin-top: 8px; width: 100%;">Move story</button>
+          </form>
+        </div>
+      </details>
+    {% endif %}
+  </div>
+</td></tr>{% empty %}<tr><td colspan="5">Your next chapter starts here. Write your first story.</td></tr>{% endfor %}</tbody></table></div>
 {% if can_edit %}
   {% for blog in blogs %}
+    <dialog class="modal" id="blog-delete-{{ blog.pk }}">
+      <button class="modal-close" data-close-dialog aria-label="Close">×</button>
+      <h2>Delete {{ blog.title }}?</h2>
+      <p class="muted" style="margin-top: -6px; margin-bottom: 20px;">Permanently delete this story. This action cannot be undone.</p>
+      <form method="post" action="{% url 'blog_action' blog.pk 'delete' %}" class="form-stack">
+        {% csrf_token %}
+        <div class="actions" style="display:flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" data-close-dialog class="button light">Cancel</button>
+          <button class="button danger">Delete story</button>
+        </div>
+      </form>
+    </dialog>
     <dialog id="schedule-modal-{{ blog.pk }}" class="modal schedule-modal">
       <button class="modal-close" data-close-dialog aria-label="Close" onclick="resetStatusSelect('{{ blog.pk }}', '{{ blog.status }}')">×</button>
       <h3>Schedule publication</h3>
@@ -161,6 +220,99 @@
   border: 1px solid #dce6ec;
   border-radius: 10px;
   font-size: 14px;
+}
+
+.actions-cell {
+  vertical-align: middle !important;
+  text-align: right;
+  white-space: nowrap;
+}
+.post-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.post-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border: 1px solid #dce6ec;
+  background: #ffffff;
+  color: #496374;
+}
+.post-action-btn:hover {
+  background: #f1f6fa;
+  color: #1f3b4d;
+  border-color: #cbdbe6;
+}
+.post-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #dce6ec;
+  background: #ffffff;
+  color: #556976;
+  text-decoration: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+.post-icon-btn:hover {
+  background: #f1f6fa;
+  color: #1f3b4d;
+  border-color: #cbdbe6;
+  transform: translateY(-1px);
+}
+.post-icon-btn.edit-btn:hover {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+.post-icon-btn.delete-btn:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+.post-icon-btn.move-btn:hover {
+  background: #faf5ff;
+  color: #9333ea;
+  border-color: #e9d5ff;
+}
+.move-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.move-dropdown summary {
+  list-style: none;
+}
+.move-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+.move-menu-panel {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 6px;
+  z-index: 50;
+  background: #ffffff;
+  border: 1px solid #e2ecf0;
+  border-radius: 12px;
+  padding: 14px;
+  width: 240px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  text-align: left;
 }
 </style>
 
