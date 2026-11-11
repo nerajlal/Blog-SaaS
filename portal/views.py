@@ -496,9 +496,13 @@ def blog_action(request, blog_id, action):
         blog = Blog.objects.select_for_update().get(pk=blog.pk)
         if action == "delete":
             blog.delete()
-        elif action == "toggle-status":
-            blog.status = "draft" if blog.status == "published" else "published"
-            blog.published_at = timezone.now() if blog.status == "published" else None
+        elif action in ("toggle-status", "status"):
+            new_status = request.POST.get("status")
+            if new_status in ("draft", "published", "scheduled"):
+                blog.status = new_status
+            else:
+                blog.status = "draft" if blog.status == "published" else "published"
+            blog.published_at = timezone.now() if blog.status == "published" else (None if blog.status == "draft" else blog.published_at)
             blog.revision += 1
             blog.save()
         elif action == "move":
