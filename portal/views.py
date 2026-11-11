@@ -676,6 +676,17 @@ def profile(request, pk):
                     )
                 return redirect("profile", pk=pk)
     config, _ = AiSettings.objects.get_or_create(scope=ai.scope(project))
+    used = (
+        AiUsage.objects.filter(
+            scope=ai.scope(project), month=timezone.now().strftime("%Y-%m")
+        )
+        .values_list("requests", flat=True)
+        .first()
+        or 0
+    )
+    limit = config.monthly_limit or 20
+    usage_percent = min(100, int((used / limit) * 100)) if limit > 0 else 0
+
     return render(
         request,
         "portal/profile.html",
@@ -686,12 +697,8 @@ def profile(request, pk):
             "approved": ai.approved(project),
             "ai_config": config,
             "ready": ai.ready(),
-            "requests_used": AiUsage.objects.filter(
-                scope=ai.scope(project), month=timezone.now().strftime("%Y-%m")
-            )
-            .values_list("requests", flat=True)
-            .first()
-            or 0,
+            "requests_used": used,
+            "usage_percent": usage_percent,
         },
     )
 
@@ -719,15 +726,15 @@ def profile_action(request, pk, action):
                 defaults={"data": obj.data, "approved_by": request.user},
             )
     elif action == "settings":
-        limit = int(request.POST.get("monthly_limit", 20))
-        if not 1 <= limit <= settings.AI_MONTHLY_REQUEST_LIMIT:
-            raise ValidationError("Invalid allowance.")
+        defaults = {"enabled": request.POST.get("enabled") == "1"}
+        if "monthly_limit" in request.POST and request.user.is_superuser:
+            limit = int(request.POST.get("monthly_limit", 20))
+            if not 1 <= limit <= settings.AI_MONTHLY_REQUEST_LIMIT:
+                raise ValidationError("Invalid allowance.")
+            defaults["monthly_limit"] = limit
         AiSettings.objects.update_or_create(
             scope=ai.scope(project),
-            defaults={
-                "enabled": request.POST.get("enabled") == "1",
-                "monthly_limit": limit,
-            },
+            defaults=defaults,
         )
     else:
         raise Http404
