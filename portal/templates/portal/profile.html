@@ -96,7 +96,7 @@
     </form>
   </div>
 
-  <aside class="stack">
+  <aside class="stack project-details-sidebar" aria-label="AI profile and usage">
     <!-- Active AI Profile Status Card -->
     <section class="panel ai-status-panel">
       <div class="ai-status-header">
@@ -190,6 +190,17 @@
 </div>
 
 <style>
+@media (min-width: 1001px) {
+  .project-details-sidebar {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
 .profile-forms-column {
   display: flex;
   flex-direction: column;

@@ -127,6 +127,7 @@ python manage.py createsuperuser
 
 
 
+
 cd /var/www/Blog-SaaS
 umask 022
 git pull --ff-only origin main
