@@ -660,6 +660,23 @@ class PortalTests(TestCase):
         self.assertContains(response, "Frozen")
         self.assertContains(response, "Other managed workspace")
 
+    def test_project_posts_show_featured_thumbnail_and_author(self):
+        self.blog.cover_image = "/storage/blogs/banners/feature.webp"
+        self.blog.cover_image_alt = "Featured fragrance"
+        self.blog.author_name = "Example Author"
+        self.blog.save()
+        response = self.client.get(reverse("project", args=[self.project.pk]))
+        self.assertContains(response, "/storage/blogs/banners/feature.webp")
+        self.assertContains(response, 'alt="Featured fragrance"')
+        self.assertContains(response, "By Example Author")
+        self.assertContains(response, reverse("blog_preview", args=[self.blog.pk]))
+        self.blog.cover_image = ""
+        self.blog.save()
+        self.assertContains(
+            self.client.get(reverse("project", args=[self.project.pk])),
+            "No featured image",
+        )
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,

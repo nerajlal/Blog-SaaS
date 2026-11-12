@@ -130,12 +130,11 @@ python manage.py createsuperuser
 
 cd /var/www/Blog-SaaS
 umask 022
-git pull --ff-only origin main
 
-.venv/bin/python manage.py collectstatic --noinput
-
-chown -R www-data:www-data .local/static
+git pull --ff-only origin main &&
+.venv/bin/pip install -r requirements.lock &&
+.venv/bin/python manage.py migrate &&
+.venv/bin/python manage.py collectstatic --noinput &&
+.venv/bin/python manage.py check &&
+chown -R www-data:www-data .local/static &&
 systemctl restart blogsaas-web blogsaas-worker
-
-systemctl status blogsaas-web blogsaas-worker --no-pager
-curl -I https://blogsaas.task19.com/login

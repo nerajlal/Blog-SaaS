@@ -29,3 +29,10 @@ def customer_ai_message(value):
         str(value or ""),
         flags=re.I,
     )
+
+
+@register.filter
+def public_media_url(path, defaults):
+    from portal.services import image_url
+
+    return image_url(path, defaults)
