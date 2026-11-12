@@ -311,6 +311,41 @@ class PortalTests(TestCase):
         self.assertIsNone(site.verified_at)
         self.assertIsNone(site.activated_at)
 
+    def test_platform_integration_downloads_are_scoped_zip_files(self):
+        import zipfile
+
+        for platform, expected in [
+            ("react", "app/posts/[slug]/page.jsx"),
+            ("wordpress", "trywryter-posts.php"),
+        ]:
+            url = reverse("integration_download", args=[self.project.pk, platform])
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response["Content-Type"], "application/zip")
+            with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+                self.assertIn(
+                    "trywryter-" + platform + "/" + expected, archive.namelist()
+                )
+                self.assertFalse(
+                    any("node_modules" in name for name in archive.namelist())
+                )
+        self.assertEqual(
+            self.client.get(
+                reverse("integration_download", args=[self.project.pk, "unknown"])
+            ).status_code,
+            404,
+        )
+        outsider = User.objects.create_user(
+            username="outsider-download", email="outsider-download@example.com"
+        )
+        self.client.force_login(outsider)
+        self.assertEqual(
+            self.client.get(
+                reverse("integration_download", args=[self.project.pk, "wordpress"])
+            ).status_code,
+            403,
+        )
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,

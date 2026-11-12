@@ -2273,3 +2273,38 @@ def workspace_freeze_staff(request, pk, member_pk):
         else "Staff workspace access restored.",
     )
     return redirect("projects")
+
+
+@page
+@require_GET
+def integration_download(request, pk, platform):
+    project_for(request, pk, "view")
+    from pathlib import Path
+    import zipfile
+
+    folders = {"react": "react-next", "wordpress": "wordpress"}
+    if platform not in folders:
+        raise Http404
+    root = Path(settings.BASE_DIR) / "examples" / folders[platform]
+    allowed = {".js", ".jsx", ".json", ".md", ".php", ".example"}
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for source in sorted(root.rglob("*")):
+            if (
+                source.is_file()
+                and source.suffix in allowed
+                and not any(
+                    part in {"node_modules", ".next", ".git"}
+                    for part in source.relative_to(root).parts
+                )
+            ):
+                archive.write(
+                    source,
+                    "trywryter-" + platform + "/" + str(source.relative_to(root)),
+                )
+    response = HttpResponse(buffer.getvalue(), content_type="application/zip")
+    response["Content-Disposition"] = (
+        'attachment; filename="trywryter-' + platform + '.zip"'
+    )
+    response["Cache-Control"] = "private, no-store"
+    return response

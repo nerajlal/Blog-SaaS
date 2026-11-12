@@ -10,6 +10,11 @@ from portal import superadmin
 from portal.auth_views import LimitedPasswordResetView
 
 urlpatterns = [
+    path(
+        "admin/projects/<int:pk>/integration/download/<str:platform>",
+        v.integration_download,
+        name="integration_download",
+    ),
     path("admin/projects/<int:pk>/hosted", hosted.setup, name="hosted_setup"),
     path("publications/<slug:publication>", hosted.index, name="hosted_index"),
     path(
