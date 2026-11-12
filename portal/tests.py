@@ -1892,3 +1892,131 @@ class SeoQualityTests(TestCase):
         Membership.objects.create(user=editor, workspace=self.ws, role="editor")
         self.client.force_login(editor)
         self.assertEqual(self.client.post(url, {"name": "Blocked"}).status_code, 403)
+
+    def test_section_reorder_saves_without_moving_images_between_sections(self):
+        from .forms import SectionFormSet
+
+        first = self.blog.sections.first()
+        first.image_path = "/storage/blogs/sections/first.jpg"
+        first.save()
+        second = BlogSection.objects.create(
+            blog=self.blog,
+            text_content="<p>Second section</p>",
+            image_path="/storage/blogs/sections/second.jpg",
+            order=1,
+        )
+        data = {
+            "sections-TOTAL_FORMS": "2",
+            "sections-INITIAL_FORMS": "2",
+            "sections-MIN_NUM_FORMS": "1",
+            "sections-MAX_NUM_FORMS": "100",
+        }
+        for index, section in enumerate((first, second)):
+            data.update(
+                {
+                    f"sections-{index}-id": str(section.pk),
+                    f"sections-{index}-blog": str(self.blog.pk),
+                    f"sections-{index}-text_content": section.text_content,
+                    f"sections-{index}-order": str(1 - index),
+                    f"sections-{index}-image_alt": "",
+                    f"sections-{index}-image_caption": "",
+                }
+            )
+        formset = SectionFormSet(data, instance=self.blog, prefix="sections")
+        self.assertTrue(formset.is_valid(), formset.errors)
+        formset.save()
+        self.assertEqual(
+            list(self.blog.sections.values_list("pk", flat=True)), [second.pk, first.pk]
+        )
+        first.refresh_from_db()
+        self.assertEqual(first.image_path, "/storage/blogs/sections/first.jpg")
+
+    def test_author_profile_applies_to_new_posts_without_overwriting_existing(self):
+        original_author = self.blog.author_name
+        response = self.client.post(
+            reverse("author_profile"),
+            {"author_name": "Alex Writer", "author_title": "Content specialist"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.owner.refresh_from_db()
+        self.assertEqual(self.owner.author_name, "Alex Writer")
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.author_name, original_author)
+        from .forms import BlogForm
+
+        new = Blog(project=self.project, user=self.owner)
+        form = BlogForm(project=self.project, instance=new)
+        self.assertEqual(form.initial["author_name"], "Alex Writer")
+        self.owner.author_avatar = "/storage/blogs/avatars/profile.jpg"
+        self.owner.save()
+        created = Blog.objects.create(
+            project=self.project, user=self.owner, title="New post"
+        )
+        self.assertEqual(created.author_name, "Alex Writer")
+        self.assertEqual(created.author_title, "Content specialist")
+        self.assertEqual(created.author_avatar, self.owner.author_avatar)
+        custom = Blog.objects.create(
+            project=self.project,
+            user=self.owner,
+            title="Custom author",
+            author_name="Guest Author",
+            author_title="Guest",
+            author_avatar="/storage/blogs/avatars/guest.jpg",
+        )
+        self.assertEqual(custom.author_name, "Guest Author")
+        self.assertEqual(custom.author_title, "Guest")
+        self.assertEqual(custom.author_avatar, "/storage/blogs/avatars/guest.jpg")
+        self.client.logout()
+        self.assertEqual(self.client.get(reverse("author_profile")).status_code, 302)
+
+    def test_account_settings_modal_and_password_change(self):
+        url = reverse("author_profile") + "?modal=1"
+        response = self.client.get(url)
+        self.assertContains(response, "Author profile")
+        self.assertContains(response, "Account settings")
+        self.assertNotContains(response, "<html")
+        response = self.client.post(
+            url,
+            {
+                "operation": "password",
+                "password-old_password": "wrong",
+                "password-new_password1": "NewSafePassword492!",
+                "password-new_password2": "NewSafePassword492!",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.owner.refresh_from_db()
+        self.assertTrue(self.owner.check_password("GoodPassword492!"))
+        response = self.client.post(
+            url,
+            {
+                "operation": "password",
+                "password-old_password": "GoodPassword492!",
+                "password-new_password1": "NewSafePassword492!",
+                "password-new_password2": "NewSafePassword492!",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Password changed")
+        self.owner.refresh_from_db()
+        self.assertTrue(self.owner.check_password("NewSafePassword492!"))
+        self.assertEqual(int(self.client.session["_auth_user_id"]), self.owner.pk)
+        self.assertNotContains(response, "NewSafePassword492!")
+
+    def test_account_settings_only_updates_own_display_names(self):
+        original_email = self.owner.email
+        response = self.client.post(
+            reverse("author_profile") + "?modal=1",
+            {
+                "operation": "account",
+                "account-first_name": "Updated",
+                "account-last_name": "Writer",
+                "email": "other@example.com",
+                "is_superuser": "1",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.owner.refresh_from_db()
+        self.assertEqual(self.owner.first_name, "Updated")
+        self.assertEqual(self.owner.email, original_email)
+        self.assertFalse(self.owner.is_superuser)

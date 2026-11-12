@@ -1,1 +1,21 @@
-<section class="section-form">{{ section.non_field_errors }}{{ section.id }}{{ section.blog }}{% include 'portal/field.html' with field=section.text_content %}<details><summary>Section image & options</summary><div class="form-stack">{% include 'portal/field.html' with field=section.image %}{% include 'portal/field.html' with field=section.image_alt %}{% include 'portal/field.html' with field=section.image_caption %}{% include 'portal/field.html' with field=section.image_decorative %}{% include 'portal/field.html' with field=section.order %}{% include 'portal/field.html' with field=section.DELETE %}</div></details></section>
+<section class="section-form">
+  {{ section.non_field_errors }}{{ section.id }}{{ section.blog }}
+
+  <div class="editor-settings-card section-options-card">
+    <div class="section-reorder-tools"><button type="button" class="section-drag-handle" aria-label="Drag to reorder section" title="Drag to reorder">⠿</button><div class="section-move-buttons"><button type="button" data-section-move="up" aria-label="Move section up" title="Move up">↑</button><button type="button" data-section-move="down" aria-label="Move section down" title="Move down">↓</button></div></div>
+    <details>
+      <summary><span data-section-number>Section</span> · Content &amp; image <small data-section-position></small></summary>
+      <div class="form-stack">
+        {% include 'portal/field.html' with field=section.image %}
+        {% include 'portal/field.html' with field=section.image_alt %}
+        {% include 'portal/field.html' with field=section.image_caption %}
+        <div class="section-rich-text-field">
+          {{ section.text_content.errors }}
+          <label for="{{ section.text_content.id_for_label }}">Section text</label>
+          {{ section.text_content }}
+        </div>
+        {{ section.image_decorative.as_hidden }}{{ section.order.as_hidden }}{{ section.DELETE.as_hidden }}
+      </div>
+    </details>
+  </div>
+</section>

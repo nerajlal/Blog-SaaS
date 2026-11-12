@@ -151,3 +151,115 @@
 @media(prefers-reduced-motion:reduce){.ai-highlight-button .ai-sparkle{animation:none}}
 
 .project-card-management{display:flex;align-items:center;gap:6px;flex-shrink:0}.project-pencil-button{width:36px;height:36px;display:grid;place-items:center;border:1px solid #e2eaf2;border-radius:10px;background:#f4f8fd;color:#6583a6;cursor:pointer}.project-pencil-button:hover{background:#eaf2ff;color:#3975ed;border-color:#ccdcf4}
+
+.workspace-app .category-create-row{display:flex;flex-wrap:nowrap;align-items:center;gap:10px;margin-bottom:18px;width:100%;max-width:none}
+.workspace-app .category-create-row input[name="name"]{flex:1;min-width:0;width:auto;margin:0}
+.workspace-app .category-create-row .button{flex-shrink:0;white-space:nowrap;margin:0}
+@media(max-width:400px){.workspace-app .category-create-row{gap:7px}.workspace-app .category-create-row .button{padding-inline:12px;font-size:12px}}
+
+.editor-settings-card{padding:24px;border:1px solid #e0e8ef;border-radius:14px;background:#fbfdff;margin:22px 0}
+.editor-settings-card>h2,.editor-settings-card>h3{margin:0 0 20px;font-size:18px;color:#243741}
+.section-options-card{background:#f7fafc;margin-bottom:8px}
+@media(max-width:767px){.editor-settings-card{padding:18px;margin:18px 0}}
+
+.editor-settings-card>details{margin:0}
+.editor-settings-card>details>summary{margin:0;font-size:16px;font-weight:600;color:#243741;cursor:pointer}
+.editor-settings-card>details[open]>summary{margin-bottom:22px}
+
+/* Editor cards sit independently on the workspace background, inside one save form. */
+.post-editor-layout{gap:20px}
+.post-editor-layout>.panel,.post-editor-layout .editor-settings-card{margin:0;background:white}
+.post-editor-layout .editor-main-details{display:grid;gap:16px}
+.post-editor-layout .editor-main-details>p{margin:0}
+.post-editor-layout .section-form{border:0;padding:0;margin:0 0 20px;display:grid;gap:20px}
+.post-editor-layout .editor-content-card{margin:0}
+.post-editor-layout .editor-content-card>p{margin:0}
+.post-editor-layout #section-list{margin:0}
+.post-editor-layout .editor-publish-card{display:grid;gap:20px}
+.post-editor-layout .editor-publish-card>.button{justify-self:start}
+.post-editor-layout #add-section{justify-self:start}
+
+.post-editor-layout .section-form.editor-settings-card{border:1px solid #e0e8ef;padding:24px;margin:0 0 20px;display:block;background:white}
+.post-editor-layout .section-form.editor-settings-card>details{margin:0}
+@media(max-width:767px){.post-editor-layout .section-form.editor-settings-card{padding:18px}}
+
+/* Quill must size to its content rather than overlap the following image field. */
+.section-rich-text-field{min-width:0}
+.workspace-app .section-rich-text-field .ql-container{height:auto;min-height:0}
+.workspace-app .section-rich-text-field .ql-editor{height:auto;min-height:260px;overflow-y:visible}
+.workspace-app .section-rich-text-field .ql-toolbar{position:relative;z-index:2}
+.workspace-app .section-form .form-stack>p{margin:0;min-width:0}
+.workspace-app .section-form input[type="file"]{max-width:100%}
+
+.workspace-app .post-editor-layout .section-rich-text-field .ql-container{height:auto;min-height:0}
+.workspace-app .post-editor-layout .section-rich-text-field .ql-editor{height:auto;min-height:260px;overflow-y:visible}
+
+.section-reorder-bar{display:flex;gap:9px;align-items:center;margin:-5px 0 15px;padding-bottom:12px;border-bottom:1px solid #edf1f5;color:#8a99a7;font-size:11px}.section-drag-handle,.section-move-buttons button{border:1px solid #dfe7ef;border-radius:6px;background:#f8fafc;color:#68839d;min-width:29px;min-height:29px;cursor:pointer}.section-drag-handle{cursor:grab;font-size:20px;line-height:1}.section-drag-handle:active{cursor:grabbing}.section-move-buttons{margin-left:auto;display:flex;gap:6px}.section-move-buttons button:disabled{opacity:.3;cursor:default}.section-form.is-dragging{opacity:.45;outline:2px dashed #7ea2d6;outline-offset:4px;border-radius:12px}.section-reorder-help{font-size:11px;margin:0}
+
+/* Section actions share the disclosure heading row. */
+.section-options-card{position:relative}
+.section-reorder-tools{position:absolute;top:19px;right:20px;display:flex;gap:7px;align-items:center;z-index:3}
+.section-reorder-tools .section-move-buttons{margin:0}
+.section-drag-handle{touch-action:none;user-select:none;-webkit-user-select:none}
+.section-options-card>details>summary{padding-right:120px;min-height:30px;line-height:1.7}
+.section-form.is-dragging{opacity:.65;outline:2px dashed #7ea2d6;outline-offset:3px}
+@media(max-width:767px){.section-reorder-tools{top:15px;right:13px;gap:4px}.section-reorder-tools button{min-width:25px;min-height:27px}.section-reorder-tools .section-move-buttons{gap:3px}.section-options-card>details>summary{padding-right:100px;font-size:13px}}
+
+/* Drag grip precedes the disclosure arrow; move buttons stay on the right. */
+.section-reorder-tools{position:static;display:contents}
+.section-reorder-tools>.section-drag-handle{position:absolute;left:17px;top:19px;z-index:3}
+.section-reorder-tools>.section-move-buttons{position:absolute;right:20px;top:19px;z-index:3}
+.section-options-card>details>summary{margin-left:35px;padding-right:80px}
+@media(max-width:767px){.section-reorder-tools>.section-drag-handle{left:12px;top:15px}.section-reorder-tools>.section-move-buttons{right:13px;top:15px}.section-options-card>details>summary{margin-left:31px;padding-right:65px}}
+
+.section-drag-preview{position:fixed;z-index:10000;pointer-events:none;padding:17px 22px;background:#f5f9ff;border:2px solid #6999e5;border-radius:12px;box-shadow:0 12px 28px #274a7626;color:#315b92;font:600 14px/1.5 Inter,sans-serif;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.section-reorder-status:empty{display:none}.section-reorder-status{padding:9px 13px;background:#edf5ff;border-radius:7px;font-size:12px;color:#466990}
+.section-form.is-dragging{background:#eaf2ff;opacity:.3}
+.section-options-card .section-drag-handle{width:32px;min-height:32px;color:#53769a;background:#eef4fb}
+
+.section-options-card [data-section-position]{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:400;color:#7a91aa;background:#edf3fa;vertical-align:middle}
+.section-form.section-just-moved>.section-options-card{border-color:#6d9de4;box-shadow:0 0 0 2px #dceafe}
+
+.sidebar-account-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}.sidebar-account-actions form{margin:0}.sidebar-profile-button{display:grid;place-items:center;width:33px;height:33px;border:1px solid #e2eaf1;border-radius:50%;color:#71899d;background:#f7fafc}.sidebar-profile-button:hover{background:#eaf2ff;color:#3975ed}.author-profile-panel{max-width:700px}.author-profile-avatar{border-radius:50%;object-fit:cover;margin-bottom:24px}.editor-author-preview{display:flex;align-items:center;gap:13px;color:#83929f}.editor-author-preview img{border-radius:50%;object-fit:cover}.editor-author-preview small{font-size:11px}
+
+.account-settings-modal{width:min(620px,calc(100vw - 28px));max-width:620px;max-height:88vh;padding:0}.account-settings-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;border-bottom:1px solid #e4ebf0}.account-settings-header h2{font-size:19px;margin:0}[data-account-settings-content]{padding:24px}.account-settings-tabs{display:flex;gap:7px;border-bottom:1px solid #e3eaf1;margin-bottom:24px;padding-bottom:10px}.account-settings-tabs button{flex:1;border:1px solid #e2eaf2;border-radius:8px;background:#f8fafc;padding:10px;font-size:12px;color:#74879b}.account-settings-tabs button[aria-selected="true"]{background:#edf3ff;border-color:#cddcf8;color:#3975ed;font-weight:600}.account-settings-divider{border:0;border-top:1px solid #e3eaf1;margin:26px 0}.account-settings-modal .helptext,.account-settings-modal .muted{font-size:11px}.account-settings-modal ul{font-size:11px;padding-left:20px}
+
+.editor-author-profile-link{padding-top:18px;border-top:1px solid #e3eaf1}.editor-author-profile-link>a{font-size:13px;font-weight:500;color:#3975ed}.editor-author-profile-link>small{display:block;margin-top:7px;font-size:11px;color:#8796a4;line-height:1.7}
+
+.editor-author-profile-button{display:grid;place-items:center;flex-shrink:0;width:46px;height:46px;border:1px solid #dce6ef;border-radius:50%;background:white;color:#6584a1;transition:background .15s,border-color .15s}
+.editor-author-profile-button:hover{background:#edf4ff;border-color:#b9cff0;color:#3975ed}
+.editor-header-actions{margin-left:auto;align-self:center}
+@media(max-width:767px){.editor-header-actions{align-self:flex-end;margin-top:-8px}}
+
+.editor-author-profile-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;width:auto;min-height:44px;height:auto;padding:10px 17px;border-radius:24px;font-size:12px;font-weight:500;white-space:nowrap}
+.editor-author-profile-button svg{width:19px;height:19px}
+
+.section-list-header{display:flex;justify-content:space-between;align-items:center;gap:20px}.section-list-header .section-reorder-help{flex:1;margin:0}.section-list-header #add-section{flex-shrink:0;white-space:nowrap}
+@media(max-width:600px){.section-list-header{flex-wrap:wrap;gap:12px}.section-list-header .section-reorder-help{flex-basis:100%}.section-list-header #add-section{margin-left:auto}}
+
+/* Post content and supplemental settings share a single save form. */
+.editor-columns{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;align-items:start}
+.editor-main-column{display:flex;flex-direction:column;gap:20px;min-width:0}
+.editor-main-column>.panel{margin:0}
+.editor-right-sidebar{display:grid;gap:18px;min-width:0;position:sticky;top:24px}
+.editor-right-sidebar .editor-settings-card{padding:20px;min-width:0}
+.editor-right-sidebar .editor-settings-card>details>summary{font-size:15px}
+.editor-right-sidebar .form-stack{gap:14px}
+.editor-right-sidebar .form-stack>p{margin:0}
+.editor-right-sidebar input,.editor-right-sidebar textarea{max-width:100%;min-width:0}
+.editor-right-sidebar .helptext{font-size:10px;line-height:1.7}
+@media(min-width:1001px) and (max-width:1200px){.editor-columns{grid-template-columns:minmax(0,1fr) 260px;gap:18px}.editor-right-sidebar .editor-settings-card{padding:17px}}
+@media(max-width:1000px){.editor-columns{grid-template-columns:minmax(0,1fr)}.editor-right-sidebar{position:static;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}
+@media(max-width:600px){.editor-right-sidebar{grid-template-columns:minmax(0,1fr)}}
+
+.editor-right-sidebar .editor-sidebar-heading{font-size:15px;line-height:1.5;margin:0 0 18px;font-weight:600}
+
+.post-editor-layout .editor-publish-heading{font-size:18px;margin:0}
+.post-editor-layout .editor-publish-card .two-columns{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.post-editor-layout .editor-publish-card .two-columns>p{margin:0;min-width:0}
+.post-editor-layout .editor-publish-card label{margin:0 0 8px}
+@media(max-width:600px){.post-editor-layout .editor-publish-card .two-columns{grid-template-columns:minmax(0,1fr);gap:18px}}
+
+.post-editor-layout .editor-right-sidebar .editor-publish-card .two-columns{grid-template-columns:minmax(0,1fr);gap:16px}
+.post-editor-layout .editor-right-sidebar .editor-publish-heading{font-size:15px}
+.post-editor-layout .editor-right-sidebar .editor-publish-card>.button{width:100%;justify-self:stretch}

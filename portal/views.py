@@ -56,6 +56,87 @@ def page(view):
 
 
 @page
+@require_http_methods(["GET", "POST"])
+def author_profile(request):
+    from django.contrib.auth.forms import PasswordChangeForm
+    from django.contrib.auth import update_session_auth_hash
+
+    modal = request.GET.get("modal") == "1"
+    operation = request.POST.get("operation", "author")
+    posted = request.method == "POST"
+    form = AuthorProfileForm(
+        request.POST if posted and operation == "author" else None,
+        request.FILES if posted and operation == "author" else None,
+        instance=request.user,
+        auto_id="profile_%s",
+    )
+    account_form = AccountSettingsForm(
+        request.POST if posted and operation == "account" else None,
+        instance=request.user,
+        prefix="account",
+    )
+    password_form = PasswordChangeForm(
+        request.user,
+        data=request.POST if posted and operation == "password" else None,
+        prefix="password",
+    )
+    success = ""
+    if posted:
+        if operation == "author" and form.is_valid():
+            try:
+                avatar = request.user.author_avatar
+                if form.cleaned_data.get("avatar_image"):
+                    avatar = save_image(form.cleaned_data["avatar_image"], "avatars")
+                elif form.cleaned_data.get("remove_avatar"):
+                    avatar = ""
+                user = form.save(commit=False)
+                user.author_avatar = avatar
+                user.save(
+                    update_fields=["author_name", "author_title", "author_avatar"]
+                )
+                success = (
+                    "Author profile saved. These details will be used for new posts."
+                )
+            except ValidationError as error:
+                form.add_error("avatar_image", error)
+        elif operation == "account" and account_form.is_valid():
+            account_form.save()
+            success = "Account details saved."
+        elif operation == "password":
+            try:
+                rate_limit(request, "change-password", 5, 60)
+                if password_form.is_valid():
+                    user = password_form.save()
+                    update_session_auth_hash(request, user)
+                    password_form = PasswordChangeForm(user, prefix="password")
+                    success = "Password changed. You are still signed in."
+            except ValidationError as error:
+                password_form.add_error(None, error)
+        elif operation not in ("author", "account", "password"):
+            raise ValidationError("Choose a supported account action.")
+        if success and not modal:
+            messages.success(request, success)
+            return redirect("author_profile")
+    context = {
+        "form": form,
+        "account_form": account_form,
+        "password_form": password_form,
+        "author_image": image_url(request.user.author_avatar, {}),
+        "success": success,
+        "settings_tab": "account" if operation in ("account", "password") else "author",
+        "modal": modal,
+    }
+    return render(
+        request,
+        "portal/account_settings_content.html"
+        if modal
+        else "portal/author_profile.html",
+        context,
+        status=400 if posted and not success else 200,
+    )
+
+
+@page
 def admin_docs(request):
     return render(request, "portal/admin_docs.html")
 
@@ -571,7 +652,17 @@ def edit_blog(request, pk=None, blog_id=None):
     return render(
         request,
         "portal/editor.html",
-        {"project": project, "blog": blog, "form": form, "sections": sections},
+        {
+            "project": project,
+            "blog": blog,
+            "form": form,
+            "sections": sections,
+            "author_image": image_url(
+                blog.author_avatar
+                or (request.user.author_avatar if not blog.pk else ""),
+                project.seo_settings,
+            ),
+        },
         status=status,
     )
 
@@ -680,6 +771,7 @@ def autosave(request, blog_id):
             "title",
             "slug",
             "excerpt",
+            "content",
             "status",
             "published_at",
             "category",
@@ -704,6 +796,8 @@ def autosave(request, blog_id):
                 raise ValidationError("Invalid draft sections.")
             snapshot["sections"] = [
                 {
+                    "section_id": str(row.get("section_id", ""))[:20],
+                    "order": max(0, min(99, int(row.get("order", 0)))),
                     "text_content": clean_html(str(row.get("text_content", ""))),
                     "image_alt": str(row.get("image_alt", ""))[:500],
                     "image_caption": str(row.get("image_caption", ""))[:2000],

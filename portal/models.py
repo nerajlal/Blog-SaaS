@@ -24,6 +24,9 @@ def batch_expiry():
 class User(AbstractUser):
     username = models.CharField(max_length=254, unique=True)
     email = models.EmailField(unique=True)
+    author_name = models.CharField(max_length=255, blank=True)
+    author_title = models.CharField(max_length=255, blank=True)
+    author_avatar = models.CharField(max_length=500, blank=True)
     current_workspace = models.ForeignKey(
         "Workspace", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
@@ -151,6 +154,14 @@ class Blog(Timestamped):
     def save(self, *args, **kwargs):
         from .services import clean_html
 
+        if not self.pk and self.user_id:
+            for field, value in {
+                "author_name": self.user.author_name or self.user.first_name,
+                "author_title": self.user.author_title,
+                "author_avatar": self.user.author_avatar,
+            }.items():
+                if not getattr(self, field):
+                    setattr(self, field, value)
         self.content = clean_html(self.content)
         if not self.slug:
             self.slug = (

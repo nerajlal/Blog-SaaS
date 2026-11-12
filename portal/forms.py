@@ -56,6 +56,34 @@ class ProjectForm(forms.ModelForm):
         widgets = {"description": forms.TextInput()}
 
 
+class AccountSettingsForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ["first_name", "last_name"]
+        labels = {"first_name": "First name", "last_name": "Last name"}
+
+
+class AuthorProfileForm(forms.ModelForm):
+    avatar_image = forms.ImageField(required=False, label="Author image")
+    remove_avatar = forms.BooleanField(
+        required=False, label="Remove current author image"
+    )
+
+    class Meta:
+        model = User
+        fields = ["author_name", "author_title", "avatar_image", "remove_avatar"]
+        labels = {"author_name": "Author name", "author_title": "Author title / role"}
+
+    def clean(self):
+        data = super().clean()
+        if data.get("avatar_image") and data.get("remove_avatar"):
+            self.add_error(
+                "avatar_image",
+                "Upload a new image or remove the current one, not both.",
+            )
+        return data
+
+
 class BlogForm(forms.ModelForm):
     slug = forms.SlugField(
         required=False,
@@ -118,6 +146,7 @@ class BlogForm(forms.ModelForm):
             "slug",
             "category",
             "excerpt",
+            "content",
             "status",
             "published_at",
             "banner_image",
@@ -145,6 +174,7 @@ class BlogForm(forms.ModelForm):
             "editor_revision",
         ]
         widgets = {
+            "content": forms.Textarea(attrs={"class": "rich-editor", "rows": 10}),
             "published_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
             "excerpt": forms.Textarea(attrs={"rows": 2}),
             "cover_image_caption": forms.Textarea(attrs={"rows": 2}),
@@ -152,8 +182,22 @@ class BlogForm(forms.ModelForm):
 
     def __init__(self, *args, project, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.initial["status"] = "published"
+        for name, label in {
+            "banner_image": "Featured image",
+            "cover_image_alt": "Image alt text",
+            "cover_image_caption": "Image caption",
+            "image_credits": "Image credits",
+        }.items():
+            self.fields[name].label = label
         self.fields["category"].queryset = project.categories.all()
         self.fields["category"].required = True
+        if not self.instance.pk and self.instance.user_id:
+            self.initial["author_name"] = (
+                self.instance.user.author_name or self.instance.user.first_name
+            )
+            self.initial["author_title"] = self.instance.user.author_title
         for field, key in [
             ("seo_title", "title"),
             ("seo_description", "description"),
@@ -195,6 +239,13 @@ class BlogForm(forms.ModelForm):
             not data.get("published_at") or data["published_at"] <= timezone.now()
         ):
             self.add_error("published_at", "Choose a future publication date.")
+        if data.get("status") == "draft":
+            data["published_at"] = None
+        elif data.get("status") == "published":
+            previous_date = self.instance.published_at
+            data["published_at"] = (
+                previous_date if previous_date and previous_date <= timezone.now() else None
+            )
         from .services import public_url
 
         for key in ["canonical_url", "og_image_url", "x_image_url"]:
