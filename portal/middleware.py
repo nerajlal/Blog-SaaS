@@ -51,3 +51,39 @@ class PublicApiCorsMiddleware:
             response["Access-Control-Allow-Origin"] = site
             patch_vary_headers(response, ["Origin"])
         return response
+
+
+class HostedDomainMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from urllib.parse import urlsplit
+        from django.conf import settings
+        from .models import HostedSite
+
+        host = request.get_host().split(":")[0].lower()
+        if host not in [
+            urlsplit(settings.PUBLIC_URL).hostname,
+            "localhost",
+            "127.0.0.1",
+            "testserver",
+            "[::1]",
+        ]:
+            site = (
+                HostedSite.objects.select_related("project").filter(domain=host).first()
+            )
+            if not site or not site.enabled or not site.verified_at:
+                return HttpResponse(status=404)
+            if request.path == "/.well-known/trywryter-hosted" and request.method in [
+                "GET",
+                "HEAD",
+            ]:
+                return HttpResponse(site.verification_token, content_type="text/plain")
+            if not site.activated_at:
+                return HttpResponse(
+                    "Hosted blog setup is pending HTTPS activation.", status=404
+                )
+            request.hosted_site = site
+            request.urlconf = "portal.hosted_urls"
+        return self.get_response(request)

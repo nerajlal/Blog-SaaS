@@ -401,6 +401,13 @@ def rate_limit(request, name, count=60, seconds=60):
 
 def article_url(blog):
     p = blog.project
+    from .models import HostedSite
+
+    site = HostedSite.objects.filter(project=p, enabled=True).first()
+    if site:
+        from .hosted import site_origin
+
+        return site_origin(site) + "/posts/" + blog.slug
     if not p.seo_verified_at or not p.seo_settings.get("public_url"):
         return ""
     pattern = p.seo_settings.get(
@@ -486,7 +493,7 @@ def seo_payload(blog):
         ],
     }
     if canonical and seo.get("schema_type", "BlogPosting") != "none":
-        base = defaults["public_url"].rstrip("/")
+        base = (defaults.get("public_url") or own.rsplit("/posts/", 1)[0]).rstrip("/")
         publisher = {
             "@type": (defaults.get("publisher_type") or "Organization"),
             "@id": base + "/#publisher",

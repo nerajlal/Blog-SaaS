@@ -419,3 +419,14 @@ class AnalyticsConnection(Timestamped):
     tokens = EncryptedJSONField(default=dict)
     property = models.CharField(max_length=100, blank=True)
     report = models.JSONField(default=dict)
+
+
+class HostedSite(Timestamped):
+    project = models.OneToOneField(
+        Project, on_delete=models.CASCADE, related_name="hosted_site"
+    )
+    enabled = models.BooleanField(default=False)
+    domain = models.CharField(max_length=253, unique=True, null=True, blank=True)
+    verification_token = models.CharField(max_length=100, default=token)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    activated_at = models.DateTimeField(null=True, blank=True)

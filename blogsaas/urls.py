@@ -1,3 +1,4 @@
+from portal import hosted
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -9,6 +10,18 @@ from portal import superadmin
 from portal.auth_views import LimitedPasswordResetView
 
 urlpatterns = [
+    path("admin/projects/<int:pk>/hosted", hosted.setup, name="hosted_setup"),
+    path("publications/<slug:publication>", hosted.index, name="hosted_index"),
+    path(
+        "publications/<slug:publication>/posts/<slug:slug>",
+        hosted.post,
+        name="hosted_post",
+    ),
+    path(
+        "publications/<slug:publication>/sitemap.xml",
+        hosted.sitemap,
+        name="hosted_sitemap",
+    ),
     path("", v.home, name="home"),
     path(
         "admin/projects/<int:pk>/search/tools/<str:tab>",

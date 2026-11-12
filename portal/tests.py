@@ -179,6 +179,138 @@ class PortalTests(TestCase):
             self.client.get(reverse("project", args=[self.project.pk])).status_code, 200
         )
 
+    def test_hosted_blog_publication_and_private_content(self):
+        from .models import HostedSite
+        from .services import article_url
+        from datetime import timedelta
+
+        site = HostedSite.objects.create(project=self.project, enabled=True)
+        url = reverse("hosted_index", args=[self.project.subdomain])
+        detail = reverse("hosted_post", args=[self.project.subdomain, self.blog.slug])
+        self.client.logout()
+        self.assertEqual(self.client.get(detail).status_code, 404)
+        self.assertNotContains(self.client.get(url), self.blog.title)
+        self.blog.status = "scheduled"
+        self.blog.published_at = timezone.now() + timedelta(days=1)
+        self.blog.save()
+        self.assertEqual(self.client.get(detail).status_code, 404)
+        self.blog.status = "published"
+        self.blog.published_at = timezone.now()
+        self.blog.content = "<script>alert(1)</script><p>Safe body</p>"
+        self.blog.save()
+        self.assertContains(self.client.get(url), self.blog.title)
+        response = self.client.get(detail)
+        self.assertContains(response, "Safe body")
+        self.assertNotContains(response, "alert(1)")
+        sitemap = reverse("hosted_sitemap", args=[self.project.subdomain])
+        self.assertContains(self.client.get(sitemap), self.blog.slug)
+        self.assertIn("/publications/", article_url(self.blog))
+        self.blog.seo_settings = {"robots_index": "noindex"}
+        self.blog.save()
+        self.assertNotContains(self.client.get(sitemap), self.blog.slug)
+        site.enabled = False
+        site.save()
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_hosted_domain_isolates_admin_and_requires_activation(self):
+        from .models import HostedSite
+        from django.test import override_settings
+
+        site = HostedSite.objects.create(
+            project=self.project,
+            enabled=True,
+            domain="blog.example.com",
+            verified_at=timezone.now(),
+        )
+        with override_settings(ALLOWED_HOSTS=["testserver", "blog.example.com"]):
+            self.assertEqual(
+                self.client.get("/", HTTP_HOST=site.domain).status_code, 404
+            )
+            self.assertContains(
+                self.client.get("/.well-known/trywryter-hosted", HTTP_HOST=site.domain),
+                site.verification_token,
+            )
+            site.activated_at = timezone.now()
+            site.save()
+            self.assertContains(
+                self.client.get("/", HTTP_HOST=site.domain), self.project.name
+            )
+            self.assertEqual(
+                self.client.get("/admin/projects", HTTP_HOST=site.domain).status_code,
+                404,
+            )
+            self.assertContains(
+                self.client.get("/robots.txt", HTTP_HOST=site.domain),
+                "https://blog.example.com/sitemap.xml",
+            )
+
+    def test_hosted_settings_require_management(self):
+        staff = User.objects.create_user(
+            username="hostedstaff", email="hostedstaff@example.com"
+        )
+        Membership.objects.create(workspace=self.ws, user=staff, role="editor")
+        url = reverse("hosted_setup", args=[self.project.pk])
+        self.client.force_login(staff)
+        self.assertEqual(self.client.post(url, {"enabled": "1"}).status_code, 403)
+        self.client.force_login(self.owner)
+        self.assertEqual(
+            self.client.post(url, {"enabled": "1", "domain": "localhost"}).status_code,
+            400,
+        )
+        self.assertEqual(
+            self.client.post(
+                url, {"enabled": "1", "domain": "blog.example.com"}
+            ).status_code,
+            302,
+        )
+        site = self.project.hosted_site
+        self.assertTrue(site.enabled)
+        self.assertIsNone(site.verified_at)
+        self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_hosted_dns_verification_and_https_activation(self):
+        from django.core.management.base import CommandError
+
+        site = HostedSite.objects.create(
+            project=self.project, enabled=True, domain="blog.example.com"
+        )
+        url = reverse("hosted_setup", args=[self.project.pk])
+        with patch("portal.hosted.dns.resolver.resolve", return_value=[]):
+            self.assertEqual(
+                self.client.post(url, {"operation": "verify"}).status_code, 400
+            )
+        record = Mock(strings=[("trywryter=" + site.verification_token).encode()])
+        with patch("portal.hosted.dns.resolver.resolve", return_value=[record]):
+            self.assertEqual(
+                self.client.post(url, {"operation": "verify"}).status_code, 302
+            )
+        site.refresh_from_db()
+        self.assertIsNotNone(site.verified_at)
+        with patch(
+            "portal.management.commands.activate_hosted_domain.requests.get",
+            return_value=Mock(status_code=200, text="wrong-project"),
+        ):
+            with self.assertRaises(CommandError):
+                call_command(
+                    "activate_hosted_domain", site.domain, stdout=io.StringIO()
+                )
+        with patch(
+            "portal.management.commands.activate_hosted_domain.requests.get",
+            return_value=Mock(status_code=200, text=site.verification_token),
+        ):
+            call_command("activate_hosted_domain", site.domain, stdout=io.StringIO())
+        site.refresh_from_db()
+        self.assertIsNotNone(site.activated_at)
+        self.assertEqual(
+            self.client.post(
+                url, {"enabled": "1", "domain": "posts.example.com"}
+            ).status_code,
+            302,
+        )
+        site.refresh_from_db()
+        self.assertIsNone(site.verified_at)
+        self.assertIsNone(site.activated_at)
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,
