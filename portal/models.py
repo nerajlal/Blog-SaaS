@@ -49,6 +49,7 @@ class Workspace(Timestamped):
 
 
 class Membership(models.Model):
+    is_frozen = models.BooleanField(default=False)
     workspace = models.ForeignKey(
         Workspace, on_delete=models.CASCADE, related_name="memberships"
     )

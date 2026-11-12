@@ -111,7 +111,7 @@ def can_access(user, project, action="view"):
         else ["owner", "admin", "editor", "viewer"]
     )
     return Membership.objects.filter(
-        workspace_id=project.workspace_id, user=user, role__in=roles
+        is_frozen=False, workspace_id=project.workspace_id, user=user, role__in=roles
     ).exists()
 
 
@@ -133,10 +133,14 @@ def project_for(request, pk, action="view"):
 
 def current_workspace(user):
     ws = Workspace.objects.filter(
-        memberships__user=user, pk=user.current_workspace_id
+        memberships__is_frozen=False,
+        memberships__user=user,
+        pk=user.current_workspace_id,
     ).first()
     if not ws:
-        ws = Workspace.objects.filter(memberships__user=user).first()
+        ws = Workspace.objects.filter(
+            memberships__is_frozen=False, memberships__user=user
+        ).first()
         if not ws:
             with transaction.atomic():
                 ws = Workspace.objects.create(

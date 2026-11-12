@@ -5,7 +5,9 @@ from .services import can_access
 def navigation(request):
     if not request.user.is_authenticated:
         return {}
-    workspaces = Workspace.objects.filter(memberships__user=request.user)
+    workspaces = Workspace.objects.filter(
+        memberships__is_frozen=False, memberships__user=request.user
+    )
     project = getattr(request, "project_context", None)
     match = request.resolver_match
     route = match.url_name if match else ""
@@ -46,7 +48,9 @@ def navigation(request):
     if route in ["batches", "batch_operation", "batch_action"]:
         active = match.kwargs.get("kind", "metadata")
     managed = workspaces.filter(
-        memberships__user=request.user, memberships__role__in=["owner", "admin"]
+        memberships__is_frozen=False,
+        memberships__user=request.user,
+        memberships__role__in=["owner", "admin"],
     ).distinct()
     staff_memberships = (
         Membership.objects.filter(workspace__in=managed)
@@ -61,7 +65,7 @@ def navigation(request):
         "workspaces": workspaces,
         "editable_workspace_ids": set(
             Membership.objects.filter(
-                user=request.user, role__in=["owner", "admin"]
+                is_frozen=False, user=request.user, role__in=["owner", "admin"]
             ).values_list("workspace_id", flat=True)
         ),
         "active_workspace": workspaces.filter(

@@ -359,7 +359,12 @@ def workspace_action(request, pk=None):
     if request.user.is_superuser:
         return redirect("superadmin")
     if pk:
-        ws = get_object_or_404(Workspace, pk=pk, memberships__user=request.user)
+        ws = get_object_or_404(
+            Workspace,
+            pk=pk,
+            memberships__is_frozen=False,
+            memberships__user=request.user,
+        )
     else:
         name = request.POST.get("name", "").strip()
         if not name or len(name) > 255:
@@ -379,7 +384,10 @@ def workspace_action(request, pk=None):
 def workspace_rename(request, pk):
     workspace = get_object_or_404(Workspace, pk=pk)
     if not Membership.objects.filter(
-        workspace=workspace, user=request.user, role__in=["owner", "admin"]
+        is_frozen=False,
+        workspace=workspace,
+        user=request.user,
+        role__in=["owner", "admin"],
     ).exists():
         raise PermissionDenied
     name = request.POST.get("name", "").strip()
@@ -398,7 +406,10 @@ def projects(request):
         return redirect("superadmin")
     ws = current_workspace(request.user)
     can_create = Membership.objects.filter(
-        workspace=ws, user=request.user, role__in=["owner", "admin", "editor"]
+        is_frozen=False,
+        workspace=ws,
+        user=request.user,
+        role__in=["owner", "admin", "editor"],
     ).exists()
     form = ProjectForm(request.POST or None)
     if request.method == "POST":
@@ -491,7 +502,10 @@ def project_detail(request, pk, integration=False):
             "integration": integration,
             "has_ai_details": project.ai_versions.exists(),
             "movable_projects": Project.objects.filter(
-                Q(workspace__memberships__user=request.user)
+                Q(
+                    workspace__memberships__is_frozen=False,
+                    workspace__memberships__user=request.user,
+                )
                 | Q(workspace__isnull=True, user=request.user)
             )
             .exclude(pk=pk)
@@ -2150,7 +2164,10 @@ def api_not_found(request):
 def workspace_add_staff(request, pk):
     workspace = get_object_or_404(Workspace, pk=pk)
     if not Membership.objects.filter(
-        workspace=workspace, user=request.user, role__in=["owner", "admin"]
+        is_frozen=False,
+        workspace=workspace,
+        user=request.user,
+        role__in=["owner", "admin"],
     ).exists():
         raise PermissionDenied
     selected_ids = request.POST.getlist("workspaces")
@@ -2161,6 +2178,7 @@ def workspace_add_staff(request, pk):
     selected_ids = {int(value) for value in selected_ids}
     allowed_ids = set(
         Membership.objects.filter(
+            is_frozen=False,
             user=request.user,
             role__in=["owner", "admin"],
             workspace_id__in=selected_ids,
@@ -2199,7 +2217,10 @@ def workspace_remove_staff(request, pk, member_pk):
     with transaction.atomic():
         workspace = get_object_or_404(Workspace.objects.select_for_update(), pk=pk)
         manager = Membership.objects.filter(
-            workspace=workspace, user=request.user, role__in=["owner", "admin"]
+            is_frozen=False,
+            workspace=workspace,
+            user=request.user,
+            role__in=["owner", "admin"],
         ).first()
         if not manager:
             raise PermissionDenied
@@ -2216,5 +2237,39 @@ def workspace_remove_staff(request, pk, member_pk):
     messages.success(
         request,
         "Staff access removed from this workspace. Their account and posts are preserved.",
+    )
+    return redirect("projects")
+
+
+@page
+@require_POST
+def workspace_freeze_staff(request, pk, member_pk):
+    with transaction.atomic():
+        workspace = get_object_or_404(Workspace.objects.select_for_update(), pk=pk)
+        manager = Membership.objects.filter(
+            is_frozen=False,
+            workspace=workspace,
+            user=request.user,
+            role__in=["owner", "admin"],
+        ).first()
+        if not manager:
+            raise PermissionDenied
+        member = get_object_or_404(Membership, pk=member_pk, workspace=workspace)
+        if (
+            member.role == "owner"
+            or member.user_id in [workspace.owner_id, request.user.pk]
+            or (member.role == "admin" and manager.role != "owner")
+        ):
+            raise PermissionDenied
+        action = request.POST.get("action")
+        if action not in ["freeze", "unfreeze"]:
+            raise ValidationError("Choose freeze or unfreeze.")
+        member.is_frozen = action == "freeze"
+        member.save(update_fields=["is_frozen"])
+    messages.success(
+        request,
+        "Staff workspace access frozen."
+        if member.is_frozen
+        else "Staff workspace access restored.",
     )
     return redirect("projects")

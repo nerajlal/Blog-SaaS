@@ -146,6 +146,39 @@ class PortalTests(TestCase):
             self.client.get(reverse("project", args=[self.project.pk])).status_code, 403
         )
 
+    def test_staff_freeze_blocks_and_restores_workspace_access(self):
+        staff = User.objects.create_user(
+            username="freeze@example.com", email="freeze@example.com"
+        )
+        member = Membership.objects.create(workspace=self.ws, user=staff, role="editor")
+        url = reverse("workspace_freeze_staff", args=[self.ws.pk, member.pk])
+        self.client.force_login(staff)
+        self.assertEqual(self.client.post(url, {"action": "freeze"}).status_code, 403)
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.post(url, {"action": "freeze"}).status_code, 302)
+        member.refresh_from_db()
+        self.assertTrue(member.is_frozen)
+        self.assertContains(self.client.get(reverse("projects")), "Frozen")
+        self.client.force_login(staff)
+        self.assertEqual(
+            self.client.get(reverse("project", args=[self.project.pk])).status_code, 403
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse("workspace_switch", args=[self.ws.pk])
+            ).status_code,
+            404,
+        )
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.post(url, {"action": "unfreeze"}).status_code, 302)
+        member.refresh_from_db()
+        self.assertFalse(member.is_frozen)
+        self.assertEqual(member.role, "editor")
+        self.client.force_login(staff)
+        self.assertEqual(
+            self.client.get(reverse("project", args=[self.project.pk])).status_code, 200
+        )
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,
