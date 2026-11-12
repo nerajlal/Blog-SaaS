@@ -957,41 +957,42 @@ def profile_action(request, pk, action):
 @require_http_methods(["GET", "POST"])
 def studio(request, pk):
     project = project_for(request, pk)
-    blog = (
-        get_object_or_404(
-            Blog,
-            project=project,
-            pk=request.GET.get("blog") or request.POST.get("blog_id"),
-        )
-        if request.GET.get("blog") or request.POST.get("blog_id")
-        else None
+    requested_type = (
+        request.POST.get("create_type")
+        if request.method == "POST"
+        else request.GET.get("create")
     )
+    source_id = (
+        request.POST.get("blog_id")
+        if request.method == "POST"
+        else request.GET.get("blog")
+    )
+    if requested_type == "post":
+        source_id = None
+    blog = get_object_or_404(Blog, project=project, pk=source_id) if source_id else None
     platforms = [
         ("linkedin", "LinkedIn"),
         ("reddit", "Reddit"),
         ("facebook", "Facebook"),
         ("instagram", "Instagram"),
     ]
-    selected_platform = (
-        (
-            request.POST.get("platform")
-            if request.method == "POST"
-            else request.GET.get("platform", "")
-        )
-        if blog
-        else ""
+    selected_type = requested_type or (
+        request.GET.get("platform") or "linkedin" if blog else "post"
     )
-    if selected_platform not in dict(platforms):
-        selected_platform = ""
+    if selected_type not in ["post", *dict(platforms)]:
+        selected_type = "post"
+    selected_platform = selected_type if selected_type != "post" else ""
+    payload = request.POST.copy() if request.method == "POST" else None
+    if payload is not None and "create_type" in payload:
+        if payload["create_type"] not in ["post", *dict(platforms)]:
+            raise ValidationError("Choose Post or a social platform.")
+        payload["action"] = "draft" if selected_type == "post" else "social"
+        payload["platform"] = selected_platform
     form = AiRequestForm(
-        request.POST or None,
+        payload,
         initial={
             "request_key": uuid.uuid4(),
-            "action": request.GET.get("action")
-            if blog and request.GET.get("action") in ["metadata", "titles", "rewrite"]
-            else "social"
-            if blog
-            else "outline",
+            "action": "social" if selected_platform else "draft",
             "platform": selected_platform,
             "brief": f"Create a {dict(platforms)[selected_platform]} version of this article, using its key points and the approved brand facts."
             if selected_platform
@@ -1001,6 +1002,13 @@ def studio(request, pk):
             else "",
         },
     )
+    form.fields["brief"].label = (
+        "Additional instructions (optional)"
+        if selected_platform
+        else "Topic and instructions"
+    )
+    if not selected_platform:
+        form.fields["brief"].required = True
     if request.method == "POST":
         authorize(request.user, project, "update")
         rate_limit(request, "ai", 10)
@@ -1025,14 +1033,39 @@ def studio(request, pk):
                 data["profile_revision"] = obj.revision if obj else 0
                 if not urls and not text:
                     raise ValidationError("Provide pages or pasted source text.")
-            elif action == "outline" and not data["brief"]:
+            elif action in ["outline", "draft"] and not data["brief"]:
                 raise ValidationError("Enter a topic or brief.")
             elif action in ["social", "metadata", "titles"] and not blog:
                 raise ValidationError("Select a saved post first.")
             elif action == "rewrite" and not data["selected_text"]:
                 raise ValidationError("Enter the text to rewrite.")
             if action == "social":
+                if not platform:
+                    raise ValidationError("Choose a social platform.")
+                if "create_type" in request.POST:
+                    saved = (
+                        AiRun.objects.filter(
+                            project=project,
+                            blog=blog,
+                            action="social",
+                            platform=platform,
+                            state__in=["complete", "pending", "running"],
+                        )
+                        .order_by("-id")
+                        .first()
+                    )
+                    if saved:
+                        return redirect("ai_run", pk=pk, run_id=saved.pk)
                 url = data.get("public_url")
+                if (
+                    not url
+                    and "create_type" in request.POST
+                    and Blog.objects.live().filter(pk=blog.pk).exists()
+                ):
+                    try:
+                        url = public_url(article_url(blog)) if article_url(blog) else ""
+                    except ValidationError:
+                        url = ""
                 data["public_url"] = "[BLOG_URL]"
                 if url:
                     if not Blog.objects.live().filter(pk=blog.pk).exists():
@@ -1061,6 +1094,9 @@ def studio(request, pk):
             "form": form,
             "runs": Paginator(runs, 12).get_page(request.GET.get("page")),
             "social_platforms": platforms,
+            "creation_choices": [("post", "Post"), *platforms],
+            "selected_type": selected_type,
+            "source_posts": project.blogs.only("id", "title").order_by("-updated_at"),
             "selected_platform": selected_platform,
             "selected_platform_label": dict(platforms).get(selected_platform, ""),
             "approved": ai.approved(project),

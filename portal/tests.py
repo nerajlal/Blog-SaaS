@@ -433,6 +433,64 @@ class PortalTests(TestCase):
         )
         self.assertTrue(formset.is_valid(), formset.errors)
 
+    def test_simple_ai_studio_defaults_to_post_and_generates_full_draft(self):
+        url = reverse("studio", args=[self.project.pk])
+        response = self.client.get(url)
+        self.assertEqual(response.context["selected_type"], "post")
+        self.assertEqual(response.context["form"]["action"].value(), "draft")
+        self.assertNotContains(response, '<label for="id_action">')
+        self.assertContains(response, "Generate post")
+        with patch("portal.views.ai.enqueue", return_value=Mock(pk=999)) as enqueue:
+            response = self.client.post(
+                url,
+                {
+                    "create_type": "post",
+                    "brief": "Write about perfume sampling",
+                    "request_key": str(uuid.uuid4()),
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(enqueue.call_args.args[2], "draft")
+        self.assertIsNone(enqueue.call_args.args[5])
+
+    def test_simple_ai_social_uses_selected_post_and_reopens_existing_version(self):
+        url = reverse("studio", args=[self.project.pk])
+        response = self.client.get(url, {"create": "linkedin"})
+        self.assertContains(response, 'name="blog_id"')
+        self.assertContains(response, self.blog.title)
+        self.assertEqual(response.context["selected_type"], "linkedin")
+        data = {
+            "create_type": "linkedin",
+            "blog_id": self.blog.pk,
+            "request_key": str(uuid.uuid4()),
+        }
+        with patch("portal.views.ai.enqueue", return_value=Mock(pk=999)) as enqueue:
+            self.assertEqual(self.client.post(url, data).status_code, 302)
+        self.assertEqual(enqueue.call_args.args[2], "social")
+        self.assertEqual(enqueue.call_args.args[5].pk, self.blog.pk)
+        self.assertEqual(enqueue.call_args.args[6], "linkedin")
+        saved = AiRun.objects.create(
+            project=self.project,
+            user=self.owner,
+            blog=self.blog,
+            action="social",
+            platform="linkedin",
+            state="complete",
+            fingerprint="simple-social",
+        )
+        with patch("portal.views.ai.enqueue") as enqueue:
+            response = self.client.post(url, data)
+            enqueue.assert_not_called()
+        self.assertEqual(
+            response.url, reverse("ai_run", args=[self.project.pk, saved.pk])
+        )
+        self.assertEqual(
+            self.client.post(
+                url, {"create_type": "linkedin", "request_key": str(uuid.uuid4())}
+            ).status_code,
+            400,
+        )
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,

@@ -343,7 +343,15 @@ class AiRequestForm(forms.Form):
     action = forms.ChoiceField(
         choices=[
             (x, x.title())
-            for x in ["outline", "social", "titles", "metadata", "rewrite", "analyze"]
+            for x in [
+                "draft",
+                "outline",
+                "social",
+                "titles",
+                "metadata",
+                "rewrite",
+                "analyze",
+            ]
         ]
     )
     request_key = forms.UUIDField(widget=forms.HiddenInput)
