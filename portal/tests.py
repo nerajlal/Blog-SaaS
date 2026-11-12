@@ -1389,7 +1389,7 @@ class PortalTests(TestCase):
             self.assertEqual(
                 self.client.post(
                     reverse("ai_run_action", args=[self.project.pk, run.pk, "draft"]),
-                    {"category_id": self.category.pk},
+                    {"category_id": self.category.pk, "status": "draft"},
                 ).status_code,
                 302,
             )
@@ -2029,7 +2029,9 @@ class SeoQualityTests(TestCase):
         self.assertRedirects(response, reverse("edit_blog", args=[created.pk]))
         self.assertEqual(created.seo_settings["title"], result["seo_title"])
         self.assertEqual(created.seo_settings["focus_keyphrase"], "fresh perfume")
-        self.assertEqual(created.status, "draft")
+        self.assertEqual(created.status, "published")
+        self.assertIsNotNone(created.published_at)
+        self.assertTrue(Blog.objects.live().filter(pk=created.pk).exists())
         self.assertFalse(analysis_is_stale(created.analyses.latest("id"), created))
 
     def test_new_generation_requires_seo_fields_but_older_saved_results_remain_editable(

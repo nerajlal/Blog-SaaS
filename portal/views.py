@@ -1217,6 +1217,9 @@ def ai_run(request, pk, run_id, action=None):
                     Category, project=project, pk=request.POST["category_id"]
                 )
                 result = run.edited or run.result
+                publication_status = request.POST.get("status", "published")
+                if publication_status not in ["published", "draft"]:
+                    raise ValidationError("Choose Published or Draft.")
                 blog = Blog.objects.create(
                     project=project,
                     user=request.user,
@@ -1229,7 +1232,10 @@ def ai_run(request, pk, run_id, action=None):
                         "title": result.get("seo_title", ""),
                         "focus_keyphrase": result.get("focus_keyphrase", ""),
                     },
-                    status="draft",
+                    status=publication_status,
+                    published_at=timezone.now()
+                    if publication_status == "published"
+                    else None,
                 )
                 analyze(blog)
                 run.output_blog = blog
