@@ -491,6 +491,17 @@ class PortalTests(TestCase):
             400,
         )
 
+    def test_workspace_ai_defaults_enabled_without_overriding_pause(self):
+        scope = ai.scope(self.project)
+        config, created = AiSettings.objects.get_or_create(scope=scope)
+        self.assertTrue(created)
+        self.assertTrue(config.enabled)
+        config.enabled = False
+        config.save(update_fields=["enabled"])
+        self.client.get(reverse("profile", args=[self.project.pk]))
+        config.refresh_from_db()
+        self.assertFalse(config.enabled)
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,

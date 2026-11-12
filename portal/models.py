@@ -359,7 +359,7 @@ class AiProfileVersion(Timestamped):
 
 class AiSettings(models.Model):
     scope = models.CharField(max_length=100, unique=True)
-    enabled = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=True)
     monthly_limit = models.PositiveIntegerField(default=20)
 
 
