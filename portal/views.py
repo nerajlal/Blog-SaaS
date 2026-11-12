@@ -603,6 +603,15 @@ def edit_blog(request, pk=None, blog_id=None):
                 saved = form.save(commit=False)
                 saved.project = project
                 saved.user_id = blog.user_id or request.user.pk
+                author = User.objects.get(pk=saved.user_id)
+                saved.author_name = (
+                    author.author_name
+                    or author.first_name
+                    or saved.author_name
+                    or "Editorial team"
+                )
+                saved.author_title = author.author_title
+                saved.author_avatar = author.author_avatar
                 if saved.status == "published" and not saved.published_at:
                     saved.published_at = timezone.now()
                 saved.seo_settings = {
@@ -632,7 +641,6 @@ def edit_blog(request, pk=None, blog_id=None):
                     )
                 for field, source, folder in [
                     ("cover_image", "banner_image", "banners"),
-                    ("author_avatar", "avatar_image", "avatars"),
                 ]:
                     if form.cleaned_data.get(source):
                         value = save_image(form.cleaned_data[source], folder)

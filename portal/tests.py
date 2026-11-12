@@ -502,6 +502,55 @@ class PortalTests(TestCase):
         config.refresh_from_db()
         self.assertFalse(config.enabled)
 
+    def test_saving_post_refreshes_its_author_profile_and_api_values(self):
+        self.owner.author_name = "Updated Writer"
+        self.owner.author_title = "Fragrance specialist"
+        self.owner.author_avatar = "/storage/avatars/updated.jpg"
+        self.owner.save()
+        staff = User.objects.create_user(
+            username="author-editor",
+            email="author-editor@example.com",
+            author_name="Another Editor",
+        )
+        Membership.objects.create(workspace=self.ws, user=staff, role="editor")
+        self.client.force_login(staff)
+        section = self.blog.sections.get()
+        data = {
+            "title": self.blog.title,
+            "category": self.category.pk,
+            "status": "published",
+            "editor_revision": revision(self.blog),
+            "author_name": "Stale name",
+            "author_title": "Stale title",
+            "sections-TOTAL_FORMS": "1",
+            "sections-INITIAL_FORMS": "1",
+            "sections-0-id": section.pk,
+            "sections-0-blog": self.blog.pk,
+            "sections-0-text_content": section.text_content,
+            "sections-0-order": "0",
+        }
+        response = self.client.post(reverse("edit_blog", args=[self.blog.pk]), data)
+        self.assertEqual(response.status_code, 302)
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.user_id, self.owner.pk)
+        payload = blog_payload(self.blog)
+        self.assertEqual(payload["author_name"], "Updated Writer")
+        self.assertEqual(payload["author_title"], "Fragrance specialist")
+        self.assertEqual(payload["author_avatar"], "/storage/avatars/updated.jpg")
+        self.owner.author_title = ""
+        self.owner.author_avatar = ""
+        self.owner.save()
+        data["editor_revision"] = revision(self.blog)
+        self.assertEqual(
+            self.client.post(
+                reverse("edit_blog", args=[self.blog.pk]), data
+            ).status_code,
+            302,
+        )
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.author_avatar, "")
+        self.assertEqual(self.blog.author_title, "")
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,
