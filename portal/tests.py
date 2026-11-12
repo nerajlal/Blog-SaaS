@@ -346,6 +346,93 @@ class PortalTests(TestCase):
             403,
         )
 
+    def test_integration_guide_uses_project_specific_code_and_closed_sections(self):
+        response = self.client.get(reverse("integration", args=[self.project.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response, "http://testserver/api/v1/projects/blogs?page=1&amp;per_page=12"
+        )
+        self.assertContains(response, self.project.api_key)
+        self.assertContains(response, 'data-copy-code="integration-shopify"')
+        self.assertNotContains(response, '<details class="platform-guide" open>')
+        self.assertNotContains(response, "Set up Shopify blog subdomain")
+        self.assertContains(response, "API integration on your existing store")
+        from .integration_examples import examples
+
+        code = examples("https://platform.example.com", "pk_test")
+        self.assertIn("response.json()", code["react"])
+        self.assertIn("encodeURIComponent(slug)", code["shopify"])
+        self.assertIn("wp_safe_remote_get", code["wordpress"])
+
+    def test_ai_studio_form_does_not_require_context_checkbox(self):
+        from .forms import AiRequestForm
+
+        form = AiRequestForm(
+            data={
+                "action": "outline",
+                "request_key": str(uuid.uuid4()),
+                "brief": "A post about fragrance",
+            }
+        )
+        self.assertNotIn("consent", form.fields)
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_customer_ai_branding_hides_provider_names(self):
+        from .templatetags.portal_tags import customer_ai_message
+
+        self.assertEqual(
+            customer_ai_message("Claude timed out"), "TryWryter AI timed out"
+        )
+        self.assertNotIn(
+            "claude", customer_ai_message("claude-opus-example response failed").lower()
+        )
+        self.assertNotIn(
+            "anthropic", customer_ai_message("Anthropic API error").lower()
+        )
+        self.client.logout()
+        response = self.client.get(reverse("home"))
+        self.assertNotContains(response, "Claude")
+        self.assertNotContains(response, "Anthropic")
+
+    def test_legacy_ai_body_migration_moves_only_safe_single_sections(self):
+        import importlib
+        from django.apps import apps
+
+        migration = importlib.import_module(
+            "portal.migrations.0009_move_ai_body_to_main_content"
+        )
+        run = AiRun.objects.create(
+            project=self.project,
+            user=self.owner,
+            action="draft",
+            fingerprint="legacy-body",
+            output_blog=self.blog,
+        )
+        original = self.blog.sections.get().text_content
+        migration.move_ai_bodies(apps, connection.schema_editor())
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.content, original)
+        self.assertFalse(self.blog.sections.exists())
+        section = BlogSection.objects.create(
+            blog=self.blog,
+            text_content="Extra section",
+            image_path="/storage/preserved.jpg",
+        )
+        self.blog.content = ""
+        self.blog.save()
+        migration.move_ai_bodies(apps, connection.schema_editor())
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.content, "")
+        self.assertTrue(BlogSection.objects.filter(pk=section.pk).exists())
+        from .forms import SectionFormSet
+
+        formset = SectionFormSet(
+            data={"sections-TOTAL_FORMS": "0", "sections-INITIAL_FORMS": "0"},
+            instance=Blog(project=self.project, user=self.owner),
+            prefix="sections",
+        )
+        self.assertTrue(formset.is_valid(), formset.errors)
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,
@@ -1250,6 +1337,8 @@ class PortalTests(TestCase):
             )
         created = Blog.objects.get(title="A perfume draft")
         self.assertEqual(created.status, "draft")
+        self.assertEqual(created.content, run.result["body_html"])
+        self.assertFalse(created.sections.exists())
         self.assertEqual(Blog.objects.filter(title="A perfume draft").count(), 1)
         AiProfileVersion.objects.create(
             project=self.project, approved_by=self.owner, revision=2, data=version.data
@@ -1534,7 +1623,9 @@ class AiDiagnosticsTests(TestCase):
         response.status_code = 401
         response._content = b'{"message":"secret credential or prompt"}'
         detail = ai.failure_detail(requests.HTTPError(response=response))
-        self.assertIn("invalid or expired", detail)
+        self.assertIn("contact support", detail)
+        self.assertIn("HTTP 401", detail)
+        self.assertNotIn("Anthropic", detail)
         self.assertNotIn("secret", detail)
         self.assertIn("timed out", ai.failure_detail(requests.ReadTimeout()))
 

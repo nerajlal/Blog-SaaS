@@ -16,3 +16,16 @@ def asset_version(path):
 
     found = finders.find(path)
     return str(Path(found).stat().st_mtime_ns) if found else "1"
+
+
+@register.filter
+def customer_ai_message(value):
+    """Keep historical provider diagnostics out of customer-facing messages."""
+    import re
+
+    return re.sub(
+        r"\b(?:claude(?:-[a-z0-9]+)*|anthropic)\b",
+        "TryWryter AI",
+        str(value or ""),
+        flags=re.I,
+    )

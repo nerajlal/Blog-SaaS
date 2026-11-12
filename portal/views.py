@@ -494,12 +494,19 @@ def project_delete(request, pk):
 @page
 def project_detail(request, pk, integration=False):
     project = project_for(request, pk)
+    from .integration_examples import examples
+
     return render(
         request,
         "portal/project.html",
         {
             "project": project,
             "integration": integration,
+            "integration_examples": examples(
+                request.build_absolute_uri("/").rstrip("/"), project.api_key
+            )
+            if integration
+            else {},
             "has_ai_details": project.ai_versions.exists(),
             "movable_projects": Project.objects.filter(
                 Q(
@@ -1001,7 +1008,6 @@ def studio(request, pk):
             data = form.cleaned_data.copy()
             action = data.pop("action")
             key = data.pop("request_key")
-            data.pop("consent")
             platform = data.pop("platform")
             if action == "analyze":
                 authorize(request.user, project, "manage")
@@ -1181,6 +1187,7 @@ def ai_run(request, pk, run_id, action=None):
                     category=category,
                     title=result["title"],
                     excerpt=result["excerpt"],
+                    content=clean_html(result["body_html"]),
                     seo_settings={
                         "description": result["seo_description"],
                         "title": result.get("seo_title", ""),
@@ -1188,7 +1195,6 @@ def ai_run(request, pk, run_id, action=None):
                     },
                     status="draft",
                 )
-                BlogSection.objects.create(blog=blog, text_content=result["body_html"])
                 analyze(blog)
                 run.output_blog = blog
                 run.save()

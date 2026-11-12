@@ -244,7 +244,9 @@ class BlogForm(forms.ModelForm):
         elif data.get("status") == "published":
             previous_date = self.instance.published_at
             data["published_at"] = (
-                previous_date if previous_date and previous_date <= timezone.now() else None
+                previous_date
+                if previous_date and previous_date <= timezone.now()
+                else None
             )
         from .services import public_url
 
@@ -285,8 +287,8 @@ SectionFormSet = inlineformset_factory(
     can_delete=True,
     max_num=100,
     validate_max=True,
-    min_num=1,
-    validate_min=True,
+    min_num=0,
+    validate_min=False,
 )
 
 
@@ -376,7 +378,4 @@ class AiRequestForm(forms.Form):
     )
     source_text = forms.CharField(
         required=False, max_length=12000, widget=forms.Textarea(attrs={"rows": 4})
-    )
-    consent = forms.BooleanField(
-        label="Send selected context to Anthropic. This uses one workspace AI request."
     )
