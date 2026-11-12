@@ -27,6 +27,8 @@ class User(AbstractUser):
     author_name = models.CharField(max_length=255, blank=True)
     author_title = models.CharField(max_length=255, blank=True)
     author_avatar = models.CharField(max_length=500, blank=True)
+    author_bio = models.TextField(blank=True)
+    author_social_links = models.JSONField(default=dict, blank=True)
     current_workspace = models.ForeignKey(
         "Workspace", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
@@ -143,6 +145,8 @@ class Blog(Timestamped):
     author_name = models.CharField(max_length=255, blank=True)
     author_title = models.CharField(max_length=255, blank=True)
     author_avatar = models.CharField(max_length=500, blank=True)
+    author_bio = models.TextField(blank=True)
+    author_social_links = models.JSONField(default=dict, blank=True)
     seo_settings = models.JSONField(default=dict)
     is_cornerstone = models.BooleanField(default=False)
     content_reviewed_at = models.DateTimeField(null=True, blank=True)
@@ -160,6 +164,8 @@ class Blog(Timestamped):
                 "author_name": self.user.author_name or self.user.first_name,
                 "author_title": self.user.author_title,
                 "author_avatar": self.user.author_avatar,
+                "author_bio": self.user.author_bio,
+                "author_social_links": self.user.author_social_links,
             }.items():
                 if not getattr(self, field):
                     setattr(self, field, value)

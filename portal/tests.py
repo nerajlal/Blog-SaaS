@@ -551,6 +551,76 @@ class PortalTests(TestCase):
         self.assertEqual(self.blog.author_avatar, "")
         self.assertEqual(self.blog.author_title, "")
 
+    def test_webp_upload_preserves_transparency_and_resizes_images(self):
+        from PIL import Image
+
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            override_settings(MEDIA_ROOT=directory),
+        ):
+            for folder, dimensions, maximum in [
+                ("avatars", (1200, 600), 512),
+                ("banners", (3000, 1500), 2560),
+                ("sections", (100, 50), 100),
+            ]:
+                source = io.BytesIO()
+                Image.new("RGBA", dimensions, (255, 0, 0, 0)).save(source, format="PNG")
+                path = save_image(
+                    SimpleUploadedFile(
+                        "photo.png", source.getvalue(), content_type="image/png"
+                    ),
+                    folder,
+                )
+                self.assertTrue(path.endswith(".webp"))
+                with default_storage.open(
+                    path.removeprefix(settings.MEDIA_URL), "rb"
+                ) as saved:
+                    image = Image.open(saved)
+                    self.assertEqual(image.format, "WEBP")
+                    self.assertEqual(image.width, maximum)
+                    self.assertEqual(image.height, maximum // 2)
+                    self.assertEqual(image.getpixel((0, 0))[3], 0)
+                    self.assertFalse(image.getexif())
+
+    def test_author_bio_and_social_profiles_save_and_reach_api(self):
+        url = reverse("author_profile")
+        response = self.client.post(
+            url,
+            {
+                "author_name": "Writer",
+                "author_bio": "Writes about fragrances.",
+                "social_linkedin": "https://www.linkedin.com/in/writer",
+                "social_website": "https://writer.example.com",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.owner.refresh_from_db()
+        self.assertEqual(self.owner.author_bio, "Writes about fragrances.")
+        self.assertEqual(
+            self.owner.author_social_links["linkedin"],
+            "https://www.linkedin.com/in/writer",
+        )
+        blog = Blog.objects.create(
+            project=self.project, user=self.owner, title="New author details"
+        )
+        payload = blog_payload(blog)
+        self.assertEqual(payload["author_bio"], self.owner.author_bio)
+        self.assertEqual(payload["author_social_links"], self.owner.author_social_links)
+        self.assertContains(self.client.get(url), "Author description")
+        self.assertContains(self.client.get(url), "LinkedIn profile URL")
+        from .forms import AuthorProfileForm
+
+        for bad in [
+            "javascript:alert(1)",
+            "http://example.com",
+            "https://localhost/profile",
+        ]:
+            form = AuthorProfileForm({"social_linkedin": bad}, instance=self.owner)
+            self.assertFalse(form.is_valid())
+            self.assertIn("social_linkedin", form.errors)
+        form = AuthorProfileForm({"author_bio": "x" * 2001}, instance=self.owner)
+        self.assertFalse(form.is_valid())
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,
@@ -1559,7 +1629,7 @@ class PortalTests(TestCase):
                     "picture.php", image.getvalue(), content_type="image/png"
                 )
             )
-            self.assertTrue(path.endswith(".jpg"))
+            self.assertTrue(path.endswith(".webp"))
             self.assertTrue(
                 default_storage.exists(path.removeprefix(settings.MEDIA_URL))
             )

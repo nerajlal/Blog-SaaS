@@ -92,11 +92,15 @@ def author_profile(request):
                 user = form.save(commit=False)
                 user.author_avatar = avatar
                 user.save(
-                    update_fields=["author_name", "author_title", "author_avatar"]
+                    update_fields=[
+                        "author_name",
+                        "author_title",
+                        "author_avatar",
+                        "author_bio",
+                        "author_social_links",
+                    ]
                 )
-                success = (
-                    "Author profile saved. These details will be used for new posts."
-                )
+                success = "Author profile saved. These details apply to new posts and existing posts when you save them."
             except ValidationError as error:
                 form.add_error("avatar_image", error)
         elif operation == "account" and account_form.is_valid():
@@ -612,6 +616,8 @@ def edit_blog(request, pk=None, blog_id=None):
                 )
                 saved.author_title = author.author_title
                 saved.author_avatar = author.author_avatar
+                saved.author_bio = author.author_bio
+                saved.author_social_links = author.author_social_links
                 if saved.status == "published" and not saved.published_at:
                     saved.published_at = timezone.now()
                 saved.seo_settings = {

@@ -69,10 +69,34 @@ class AuthorProfileForm(forms.ModelForm):
         required=False, label="Remove current author image"
     )
 
-    class Meta:
-        model = User
-        fields = ["author_name", "author_title", "avatar_image", "remove_avatar"]
-        labels = {"author_name": "Author name", "author_title": "Author title / role"}
+    SOCIAL_PROFILES = [
+        ("linkedin", "LinkedIn"),
+        ("website", "Website"),
+        ("facebook", "Facebook"),
+        ("instagram", "Instagram"),
+        ("x", "X / Twitter"),
+        ("youtube", "YouTube"),
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["author_bio"].max_length = 2000
+        for key, label in self.SOCIAL_PROFILES:
+            self.fields["social_" + key] = forms.URLField(
+                required=False,
+                max_length=2048,
+                label=label + " profile URL",
+                initial=(self.instance.author_social_links or {}).get(key, ""),
+                widget=forms.URLInput(attrs={"placeholder": "https://…"}),
+            )
+
+    def clean_author_bio(self):
+        bio = self.cleaned_data.get("author_bio", "").strip()
+        if len(bio) > 2000:
+            raise ValidationError(
+                "Keep your author description under 2,000 characters."
+            )
+        return bio
 
     def clean(self):
         data = super().clean()
@@ -81,7 +105,51 @@ class AuthorProfileForm(forms.ModelForm):
                 "avatar_image",
                 "Upload a new image or remove the current one, not both.",
             )
+        from .services import public_url
+
+        for key, _ in self.SOCIAL_PROFILES:
+            field = "social_" + key
+            if data.get(field):
+                try:
+                    url = public_url(data[field])
+                    if not url.startswith("https://"):
+                        raise ValidationError("Use an HTTPS profile link.")
+                    data[field] = url
+                except (ValidationError, ValueError) as error:
+                    self.add_error(
+                        field,
+                        error
+                        if isinstance(error, ValidationError)
+                        else "Enter a valid public HTTPS URL.",
+                    )
         return data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.author_social_links = {
+            key: self.cleaned_data["social_" + key]
+            for key, _ in self.SOCIAL_PROFILES
+            if self.cleaned_data.get("social_" + key)
+        }
+        if commit:
+            user.save()
+        return user
+
+    class Meta:
+        model = User
+        fields = [
+            "author_name",
+            "author_title",
+            "author_bio",
+            "avatar_image",
+            "remove_avatar",
+        ]
+        labels = {
+            "author_name": "Author name",
+            "author_title": "Author title / role",
+            "author_bio": "Author description",
+        }
+        widgets = {"author_bio": forms.Textarea(attrs={"rows": 3, "maxlength": 2000})}
 
 
 class BlogForm(forms.ModelForm):

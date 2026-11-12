@@ -23,7 +23,7 @@ from django.db.models import F, Q
 from django.http import Http404
 from django.utils import timezone
 from django.utils.html import strip_tags
-from PIL import Image
+from PIL import Image, ImageOps
 from .models import *
 
 TAGS = [
@@ -169,21 +169,27 @@ def save_image(upload, folder="banners"):
         raise ValidationError("Images must be at most 2 MB.")
     try:
         img = Image.open(upload)
-        img.verify()
-        upload.seek(0)
-        img = Image.open(upload)
         if (
             img.format not in ["JPEG", "PNG", "WEBP", "GIF"]
             or img.width * img.height > 20_000_000
         ):
             raise ValueError()
-        img = img.convert("RGB")
+        img.verify()
+        upload.seek(0)
+        img = Image.open(upload)
+        transparent = "A" in img.getbands() or "transparency" in img.info
+        img = ImageOps.exif_transpose(img)
+        img = img.convert("RGBA" if transparent else "RGB")
+        limit = 512 if folder == "avatars" else 2560
+        img.thumbnail((limit, limit), Image.Resampling.LANCZOS)
         out = io.BytesIO()
-        img.save(out, format="JPEG", quality=90)
+        img.save(
+            out, format="WEBP", quality=82, method=4, exif=b"", icc_profile=b"", xmp=b""
+        )
     except Exception as exc:
         raise ValidationError("Use a valid JPEG, PNG, WebP, or GIF image.") from exc
     name = default_storage.save(
-        f"blogs/{folder}/{uuid.uuid4().hex}.jpg", ContentFile(out.getvalue())
+        f"blogs/{folder}/{uuid.uuid4().hex}.webp", ContentFile(out.getvalue())
     )
     return settings.MEDIA_URL + name
 
@@ -519,6 +525,14 @@ def seo_payload(blog):
             },
             "dateModified": blog.updated_at.isoformat(),
         }
+        if blog.author_bio:
+            article["author"]["description"] = text(blog.author_bio)
+        if blog.author_title:
+            article["author"]["jobTitle"] = text(blog.author_title)
+        if blog.author_social_links:
+            article["author"]["sameAs"] = list(blog.author_social_links.values())
+        if blog.author_avatar:
+            article["author"]["image"] = image_url(blog.author_avatar, defaults)
         if blog.published_at:
             article["datePublished"] = blog.published_at.isoformat()
         if image:
@@ -579,6 +593,8 @@ def blog_payload(blog):
         "author_name",
         "author_title",
         "author_avatar",
+        "author_bio",
+        "author_social_links",
         "image_credits",
         "status",
         "published_at",
