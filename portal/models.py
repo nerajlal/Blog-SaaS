@@ -420,6 +420,13 @@ class AiRun(Timestamped):
 
 
 class WorkItem(Timestamped):
+    import_batch = models.ForeignKey(
+        "PostImport",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="jobs",
+    )
     kind = models.CharField(max_length=30)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
@@ -449,3 +456,12 @@ class HostedSite(Timestamped):
     verification_token = models.CharField(max_length=100, default=token)
     verified_at = models.DateTimeField(null=True, blank=True)
     activated_at = models.DateTimeField(null=True, blank=True)
+
+
+class PostImport(Timestamped):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    filename = models.CharField(max_length=200)
+    payload = EncryptedJSONField(default=dict)
+    results = models.JSONField(default=dict)
+    confirmed_at = models.DateTimeField(null=True, blank=True)

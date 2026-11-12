@@ -18,6 +18,8 @@ def navigation(request):
         "project": "blogs",
         "integration": "blogs",
         "create_blog": "blogs",
+        "post_import": "blogs",
+        "post_import_preview": "blogs",
         "edit_blog": "blogs",
         "studio": "blogs",
         "ai_run": "blogs",

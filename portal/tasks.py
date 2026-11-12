@@ -50,6 +50,10 @@ def execute(item):
         "manage" if item.kind.startswith("search") else "update",
     ):
         raise ValidationError("Access changed.")
+    if item.kind == "excel_import":
+        from .excel_import import process_row
+
+        return process_row(item)
     if item.kind == "ai":
         run = AiRun.objects.filter(pk=item.payload["run_id"], state="pending").first()
         if not run:

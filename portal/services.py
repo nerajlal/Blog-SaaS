@@ -223,7 +223,7 @@ def origin(url):
     return f"{p.scheme}://{p.netloc}"
 
 
-def fetch_public(url, method="GET", same_origin=None, robots=None):
+def fetch_public(url, method="GET", same_origin=None, robots=None, binary=False):
     for _ in range(4):
         url = public_url(url)
         if same_origin and origin(url) != same_origin:
@@ -280,16 +280,19 @@ def fetch_public(url, method="GET", same_origin=None, robots=None):
             if response.status in [301, 302, 303, 307, 308]:
                 url = urljoin(url, response.headers.get("Location", ""))
                 continue
-            body = response.read(524289) if method != "HEAD" else b""
-            if len(body) > 524288:
-                raise ValidationError("Website page exceeds 512 KB.")
+            limit = 2 * 1024 * 1024 if binary else 524288
+            body = response.read(limit + 1) if method != "HEAD" else b""
+            if len(body) > limit:
+                raise ValidationError(
+                    "Image exceeds 2 MB." if binary else "Website page exceeds 512 KB."
+                )
             return {
                 "url": url,
                 "status": response.status,
                 "headers": {
                     key.lower(): value for key, value in response.headers.items()
                 },
-                "body": body.decode("utf-8", "replace"),
+                "body": body if binary else body.decode("utf-8", "replace"),
             }
         finally:
             pool.close()

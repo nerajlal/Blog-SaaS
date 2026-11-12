@@ -1,3 +1,4 @@
+from portal import import_views
 from portal import hosted
 from django.conf import settings
 from django.conf.urls.static import static
@@ -10,6 +11,14 @@ from portal import superadmin
 from portal.auth_views import LimitedPasswordResetView
 
 urlpatterns = [
+    path(
+        "admin/projects/<int:pk>/posts/import", import_views.upload, name="post_import"
+    ),
+    path(
+        "admin/projects/<int:pk>/posts/import/<int:batch_id>",
+        import_views.review,
+        name="post_import_preview",
+    ),
     path(
         "admin/projects/<int:pk>/integration/download/<str:platform>",
         v.integration_download,

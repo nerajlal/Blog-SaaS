@@ -2650,3 +2650,327 @@ class SeoQualityTests(TestCase):
         self.assertEqual(self.owner.first_name, "Updated")
         self.assertEqual(self.owner.email, original_email)
         self.assertFalse(self.owner.is_superuser)
+
+
+class ExcelImportTests(TestCase):
+    setUp = PortalTests.setUp
+
+    def workbook(self, posts, formula=False):
+        import zipfile
+        from xml.sax.saxutils import escape
+
+        columns = [
+            "ID",
+            "Title",
+            "Slug",
+            "Category",
+            "Status",
+            "Published At",
+            "Author Name",
+            "Author Title",
+            "Author Avatar",
+            "Cover Image",
+            "Image Credits",
+            "Excerpt",
+            "Content (Plain Text)",
+            "Content (HTML)",
+            "Section Images",
+            "Created At",
+            "Updated At",
+        ]
+        rows = [columns] + [
+            [post.get(column, "") for column in columns] for post in posts
+        ]
+        markup = []
+        for index, row in enumerate(rows, 1):
+            cells = "".join(
+                '<c r="'
+                + chr(65 + col)
+                + str(index)
+                + '" t="inlineStr"><is><t>'
+                + escape(str(value))
+                + "</t></is>"
+                + ("<f>1+1</f>" if formula and index == 2 and col == 1 else "")
+                + "</c>"
+                for col, value in enumerate(row)
+            )
+            markup.append('<row r="' + str(index) + '">' + cells + "</row>")
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr(
+                "xl/workbook.xml",
+                '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Posts" sheetId="1" r:id="rId1"/></sheets></workbook>',
+            )
+            archive.writestr(
+                "xl/_rels/workbook.xml.rels",
+                '<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>',
+            )
+            archive.writestr(
+                "xl/worksheets/sheet1.xml",
+                '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+                + "".join(markup)
+                + "</sheetData></worksheet>",
+            )
+        return SimpleUploadedFile(
+            "posts.xlsx",
+            output.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+    def source(self, **extra):
+        return {
+            "ID": "188",
+            "Title": "Imported perfume guide",
+            "Slug": "imported-perfume-guide",
+            "Category": "Imported guides",
+            "Status": "Published",
+            "Published At": "2026-01-02 10:00:00",
+            "Author Name": "Exported Writer",
+            "Author Title": "Specialist",
+            "Content (HTML)": "<p>Introduction.</p>",
+            **extra,
+        }
+
+    def upload(self, posts, authors="profile"):
+        return self.client.post(
+            reverse("post_import", args=[self.project.pk]),
+            {
+                "workbook": self.workbook(posts),
+                "authors": authors,
+                "date_timezone": "Asia/Kolkata",
+            },
+        )
+
+    def test_preview_confirmation_and_background_import_with_webp_images(self):
+        from .tasks import execute
+        from PIL import Image
+
+        image = io.BytesIO()
+        Image.new("RGB", (40, 20), "red").save(image, format="PNG")
+        source = self.source(
+            **{
+                "Cover Image": "https://images.example.com/cover.png",
+                "Content (HTML)": '<p>Introduction.</p><figure><img src="https://images.example.com/section.png" alt="Perfume samples"><figcaption>Sample set</figcaption></figure><p>After image.</p><script>unsafe()</script>',
+                "Section Images": "https://images.example.com/section.png",
+            }
+        )
+        self.owner.author_bio = "Our author"
+        self.owner.save()
+        before = Blog.objects.count()
+        with patch("portal.excel_import.fetch_public") as fetch:
+            response = self.upload([source])
+            fetch.assert_not_called()
+        self.assertEqual(response.status_code, 302)
+        batch = PostImport.objects.get()
+        self.assertEqual(Blog.objects.count(), before)
+        self.assertEqual(WorkItem.objects.count(), 0)
+        preview_url = reverse("post_import_preview", args=[self.project.pk, batch.pk])
+        self.assertContains(self.client.get(preview_url), "1 new posts ready")
+        self.assertEqual(self.client.post(preview_url).status_code, 400)
+        for _ in range(2):
+            self.assertEqual(
+                self.client.post(preview_url, {"confirm": "1"}).status_code, 302
+            )
+        self.assertEqual(WorkItem.objects.filter(import_batch=batch).count(), 1)
+        item = WorkItem.objects.get(import_batch=batch)
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            override_settings(MEDIA_ROOT=directory),
+            patch(
+                "portal.excel_import.fetch_public",
+                return_value={"status": 200, "body": image.getvalue()},
+            ),
+        ):
+            execute(item)
+            execute(item)
+            blog = Blog.objects.get(slug="imported-perfume-guide")
+            self.assertNotEqual(blog.pk, 188)
+            self.assertEqual(blog.author_bio, "Our author")
+            self.assertEqual(blog.published_at.hour, 4)
+            self.assertIn("Introduction.", blog.content)
+            self.assertNotIn("unsafe()", blog.content)
+            self.assertTrue(blog.cover_image.endswith(".webp"))
+            self.assertEqual(blog.sections.count(), 1)
+            section = blog.sections.get()
+            self.assertEqual(section.image_alt, "Perfume samples")
+            self.assertEqual(section.image_caption, "Sample set")
+            self.assertIn("After image.", section.text_content)
+            self.assertTrue(section.image_path.endswith(".webp"))
+            self.assertTrue(Blog.objects.live().filter(pk=blog.pk).exists())
+            batch.refresh_from_db()
+            self.assertEqual(batch.results["0"]["state"], "created")
+        self.assertEqual(AiUsage.objects.count(), 0)
+
+    def test_truncated_html_requires_explicit_recovery_and_warns(self):
+        from .excel_import import preview
+
+        source = self.source(
+            **{
+                "Content (HTML)": '<p>Start</p><img src="data:image/png;base64,unfinished',
+                "Content (Plain Text)": "Complete article text.\n\nIncluding the ending.",
+            }
+        )
+        rows = preview(self.workbook([source]), self.project, "UTC", recover_html=False)
+        self.assertTrue(rows[0]["errors"])
+        rows = preview(self.workbook([source]), self.project, "UTC", recover_html=True)
+        self.assertFalse(rows[0]["errors"])
+        self.assertIn("Including the ending.", rows[0]["parts"][0]["html"])
+        self.assertIn("Incomplete HTML image data", rows[0]["warnings"][0])
+
+    def test_complete_embedded_image_is_converted_without_network(self):
+        from .tasks import execute
+        from PIL import Image
+        import base64
+
+        image = io.BytesIO()
+        Image.new("RGB", (20, 20), "red").save(image, format="PNG")
+        uri = "data:image/png;base64," + base64.b64encode(image.getvalue()).decode()
+        self.upload(
+            [
+                self.source(
+                    **{
+                        "Content (HTML)": '<p>Start</p><img src="'
+                        + uri
+                        + '"><p>End</p>'
+                    }
+                )
+            ],
+            authors="file",
+        )
+        batch = PostImport.objects.get()
+        url = reverse("post_import_preview", args=[self.project.pk, batch.pk])
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.client.post(url, {"confirm": "1"})
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            override_settings(MEDIA_ROOT=directory),
+            patch("portal.excel_import.fetch_public") as fetch,
+        ):
+            execute(WorkItem.objects.get(import_batch=batch))
+            fetch.assert_not_called()
+            blog = Blog.objects.get(slug="imported-perfume-guide")
+            self.assertEqual(blog.author_name, "Exported Writer")
+            self.assertEqual(blog.author_title, "Specialist")
+            self.assertTrue(blog.sections.get().image_path.endswith(".webp"))
+            batch.refresh_from_db()
+            self.assertEqual(batch.payload["rows"], [])
+            self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_existing_duplicate_and_foreign_slugs_are_not_overwritten(self):
+        from .excel_import import preview
+
+        foreign_project = Project.objects.create(user=self.owner, name="Foreign")
+        foreign = Blog.objects.create(
+            project=foreign_project,
+            user=self.owner,
+            title="Foreign",
+            slug="foreign-post",
+        )
+        rows = preview(
+            self.workbook(
+                [
+                    self.source(Slug=self.blog.slug),
+                    self.source(Slug=foreign.slug),
+                    self.source(Slug="repeated"),
+                    self.source(Slug="repeated"),
+                ]
+            ),
+            self.project,
+            "UTC",
+        )
+        self.assertTrue(rows[0]["skip"])
+        self.assertTrue(rows[1]["errors"])
+        self.assertFalse(rows[2]["errors"])
+        self.assertTrue(rows[3]["errors"])
+        self.assertEqual(Blog.objects.get(pk=foreign.pk).title, "Foreign")
+
+    def test_import_rejects_formulas_invalid_urls_and_missing_headers(self):
+        from .excel_import import preview, read_rows, xml
+
+        with self.assertRaises(ValidationError):
+            read_rows(self.workbook([self.source()], formula=True))
+        with self.assertRaises(ValidationError):
+            xml(b'<!DOCTYPE x [<!ENTITY a "boom">]><x/>')
+        rows = preview(
+            self.workbook(
+                [
+                    self.source(**{"Cover Image": "http://127.0.0.1/private"}),
+                    self.source(
+                        Slug="bad-image",
+                        **{"Content (HTML)": '<img src="javascript:alert(1)">'},
+                    ),
+                    self.source(Slug="bad-date", **{"Published At": "not-a-date"}),
+                ]
+            ),
+            self.project,
+            "UTC",
+        )
+        self.assertTrue(all(row["errors"] for row in rows))
+
+    def test_import_permissions_preview_ownership_and_expiration(self):
+        viewer = User.objects.create_user(
+            username="import-viewer", email="import-viewer@example.com"
+        )
+        Membership.objects.create(workspace=self.ws, user=viewer, role="viewer")
+        self.client.force_login(viewer)
+        self.assertEqual(
+            self.client.get(reverse("post_import", args=[self.project.pk])).status_code,
+            403,
+        )
+        self.client.force_login(self.owner)
+        self.upload([self.source()])
+        batch = PostImport.objects.get()
+        editor = User.objects.create_user(
+            username="import-editor", email="import-editor@example.com"
+        )
+        Membership.objects.create(workspace=self.ws, user=editor, role="editor")
+        self.client.force_login(editor)
+        url = reverse("post_import_preview", args=[self.project.pk, batch.pk])
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.client.force_login(self.owner)
+        PostImport.objects.filter(pk=batch.pk).update(
+            created_at=timezone.now() - timedelta(days=2)
+        )
+        self.assertEqual(self.client.post(url, {"confirm": "1"}).status_code, 400)
+        self.assertEqual(WorkItem.objects.count(), 0)
+
+    def test_failed_image_download_leaves_no_partial_post(self):
+        from .tasks import execute
+        from PIL import Image
+        from pathlib import Path
+
+        image = io.BytesIO()
+        Image.new("RGB", (10, 10), "red").save(image, format="PNG")
+        self.upload(
+            [
+                self.source(
+                    **{
+                        "Cover Image": "https://images.example.com/cover.png",
+                        "Content (HTML)": '<p>Text</p><img src="https://images.example.com/bad.png">',
+                    }
+                )
+            ]
+        )
+        batch = PostImport.objects.get()
+        self.client.post(
+            reverse("post_import_preview", args=[self.project.pk, batch.pk]),
+            {"confirm": "1"},
+        )
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            override_settings(MEDIA_ROOT=directory),
+            patch(
+                "portal.excel_import.fetch_public",
+                side_effect=[
+                    {"status": 200, "body": image.getvalue()},
+                    {"status": 200, "body": b"not an image"},
+                ],
+            ),
+        ):
+            execute(WorkItem.objects.get(import_batch=batch))
+            self.assertFalse(
+                Blog.objects.filter(slug="imported-perfume-guide").exists()
+            )
+            self.assertFalse(any(path.is_file() for path in Path(directory).rglob("*")))
+        batch.refresh_from_db()
+        self.assertEqual(batch.results["0"]["state"], "failed")
