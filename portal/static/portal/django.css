@@ -267,3 +267,5 @@
 .sidebar-settings-gear{display:inline-flex;align-items:center;justify-content:center;color:#71818b;width:30px;height:30px}
 
 button.sidebar-settings-gear{border:0;background:transparent;border-radius:8px}button.sidebar-settings-gear:hover{background:#edf3ff;color:#2862f4}
+
+.staff-workspace-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px}.staff-workspace-grid .check{margin:0;overflow-wrap:anywhere}.staff-remove-button{border:1px solid #f1ccd2;background:#fff3f5;color:#a32938;border-radius:8px;padding:6px 10px;font-size:11px;white-space:nowrap}@media(max-width:420px){.staff-workspace-grid{grid-template-columns:minmax(0,1fr)}}

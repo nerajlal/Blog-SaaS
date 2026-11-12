@@ -60,6 +60,11 @@ urlpatterns = [
     path(
         "workspaces/<int:pk>/staff", v.workspace_add_staff, name="workspace_add_staff"
     ),
+    path(
+        "workspaces/<int:pk>/staff/<int:member_pk>/remove",
+        v.workspace_remove_staff,
+        name="workspace_remove_staff",
+    ),
     path("workspaces", v.workspace_action, name="workspace_create"),
     path("workspaces/<int:pk>/switch", v.workspace_action, name="workspace_switch"),
     path("admin/login", v.sign_in, name="admin_login"),

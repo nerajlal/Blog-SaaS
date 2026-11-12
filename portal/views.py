@@ -2191,3 +2191,30 @@ def workspace_add_staff(request, pk):
         "Staff access saved for the selected workspaces. They can select them in their sidebar.",
     )
     return redirect("projects")
+
+
+@page
+@require_POST
+def workspace_remove_staff(request, pk, member_pk):
+    with transaction.atomic():
+        workspace = get_object_or_404(Workspace.objects.select_for_update(), pk=pk)
+        manager = Membership.objects.filter(
+            workspace=workspace, user=request.user, role__in=["owner", "admin"]
+        ).first()
+        if not manager:
+            raise PermissionDenied
+        member = get_object_or_404(Membership, pk=member_pk, workspace=workspace)
+        if (
+            member.role == "owner"
+            or member.user_id == workspace.owner_id
+            or member.user_id == request.user.pk
+        ):
+            raise PermissionDenied
+        if member.role == "admin" and manager.role != "owner":
+            raise PermissionDenied
+        member.delete()
+    messages.success(
+        request,
+        "Staff access removed from this workspace. Their account and posts are preserved.",
+    )
+    return redirect("projects")

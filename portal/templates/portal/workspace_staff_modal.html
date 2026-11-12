@@ -6,10 +6,10 @@
 <form method="post" action="{% url 'workspace_add_staff' managed_workspaces.0.pk %}" class="form-stack">
 {% csrf_token %}<input type="hidden" name="workspace_selection" value="1">
 <label for="staff-email">Staff email<input id="staff-email" type="email" name="email" required maxlength="254" autocomplete="email"></label>
-<fieldset><legend>Grant workspace access</legend>{% for ws in managed_workspaces %}<label class="check"><input type="checkbox" name="workspaces" value="{{ ws.pk }}"{% if ws.pk == active_workspace.pk %} checked{% endif %}>{{ ws.name }}</label>{% endfor %}</fieldset>
+<fieldset><legend>Grant workspace access</legend><div class="staff-workspace-grid">{% for ws in managed_workspaces %}<label class="check"><input type="checkbox" name="workspaces" value="{{ ws.pk }}"{% if ws.pk == active_workspace.pk %} checked{% endif %}>{{ ws.name }}</label>{% endfor %}</div></fieldset>
 <p class="muted">Staff must register first. No invitation email is sent. Existing access and roles stay unchanged; unchecked workspaces receive no new access.</p>
 <button class="button">Add staff access</button></form>
 <h3>Current staff access</h3>
-{% if staff_memberships %}<div class="table-scroll"><table><thead><tr><th>Email</th><th>Workspace</th><th>Role</th></tr></thead><tbody>{% for member in staff_memberships %}<tr><td>{{ member.user.email }}</td><td>{{ member.workspace.name }}</td><td>{{ member.get_role_display|title }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">No staff added yet.</p>{% endif %}
+{% if staff_memberships %}<div class="table-scroll"><table><thead><tr><th>Email</th><th>Workspace</th><th>Role</th><th>Access</th></tr></thead><tbody>{% for member in staff_memberships %}<tr><td>{{ member.user.email }}</td><td>{{ member.workspace.name }}</td><td>{{ member.get_role_display|title }}</td><td>{% if member.user_id != request.user.pk and member.user_id != member.workspace.owner_id %}<form method="post" action="{% url 'workspace_remove_staff' member.workspace_id member.pk %}" data-confirm-staff-removal>{% csrf_token %}<button type="submit" class="staff-remove-button">Remove access</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">No staff added yet.</p>{% endif %}
 {% else %}<p>Only workspace owners and admins can manage staff.</p>{% endif %}
 </dialog>

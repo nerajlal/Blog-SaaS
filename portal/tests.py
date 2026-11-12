@@ -120,6 +120,32 @@ class PortalTests(TestCase):
             400,
         )
 
+    def test_staff_removal_revokes_access_but_preserves_posts(self):
+        staff = User.objects.create_user(
+            username="remove@example.com", email="remove@example.com"
+        )
+        member = Membership.objects.create(workspace=self.ws, user=staff, role="editor")
+        url = reverse("workspace_remove_staff", args=[self.ws.pk, member.pk])
+        self.client.force_login(staff)
+        self.assertEqual(self.client.post(url).status_code, 403)
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.assertEqual(self.client.post(url).status_code, 302)
+        self.assertFalse(Membership.objects.filter(pk=member.pk).exists())
+        self.assertTrue(User.objects.filter(pk=staff.pk).exists())
+        self.assertTrue(Blog.objects.filter(pk=self.blog.pk).exists())
+        owner_member = Membership.objects.get(workspace=self.ws, user=self.owner)
+        self.assertEqual(
+            self.client.post(
+                reverse("workspace_remove_staff", args=[self.ws.pk, owner_member.pk])
+            ).status_code,
+            403,
+        )
+        self.client.force_login(staff)
+        self.assertEqual(
+            self.client.get(reverse("project", args=[self.project.pk])).status_code, 403
+        )
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,
