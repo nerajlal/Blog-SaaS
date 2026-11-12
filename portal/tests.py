@@ -621,6 +621,45 @@ class PortalTests(TestCase):
         form = AuthorProfileForm({"author_bio": "x" * 2001}, instance=self.owner)
         self.assertFalse(form.is_valid())
 
+    def test_editor_author_caution_tracks_profile_completeness(self):
+        url = reverse("create_blog", args=[self.project.pk])
+        self.assertContains(self.client.get(url), "Complete your author profile:")
+        self.owner.author_name = "Writer"
+        self.owner.author_title = "Editor"
+        self.owner.author_avatar = "/storage/avatar.webp"
+        self.owner.author_bio = "Writes about fragrances."
+        self.owner.save()
+        response = self.client.get(url)
+        self.assertNotContains(response, "Complete your author profile:")
+        self.assertContains(response, "data-author-profile-warning hidden")
+        self.assertEqual(self.owner.author_profile_missing, [])
+        self.assertEqual(
+            self.client.get(reverse("author_profile") + "?modal=1").status_code, 200
+        )
+
+    def test_staff_popup_groups_one_email_with_multiple_workspaces(self):
+        staff = User.objects.create_user(
+            username="grouped-staff", email="grouped@example.com"
+        )
+        other = Workspace.objects.create(
+            owner=self.owner, name="Other managed workspace", slug="grouped-workspace"
+        )
+        Membership.objects.create(workspace=other, user=self.owner, role="owner")
+        first = Membership.objects.create(workspace=self.ws, user=staff, role="editor")
+        second = Membership.objects.create(
+            workspace=other, user=staff, role="editor", is_frozen=True
+        )
+        response = self.client.get(reverse("projects"))
+        self.assertContains(response, 'data-staff-email="grouped@example.com"', count=1)
+        self.assertContains(
+            response, reverse("workspace_remove_staff", args=[self.ws.pk, first.pk])
+        )
+        self.assertContains(
+            response, reverse("workspace_freeze_staff", args=[other.pk, second.pk])
+        )
+        self.assertContains(response, "Frozen")
+        self.assertContains(response, "Other managed workspace")
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,

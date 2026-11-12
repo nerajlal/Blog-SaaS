@@ -33,6 +33,19 @@ class User(AbstractUser):
         "Workspace", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
 
+    @property
+    def author_profile_missing(self):
+        return [
+            label
+            for field, label in [
+                ("author_name", "name"),
+                ("author_title", "title"),
+                ("author_avatar", "photo"),
+                ("author_bio", "description"),
+            ]
+            if not (getattr(self, field) or "").strip()
+        ]
+
 
 class Timestamped(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
