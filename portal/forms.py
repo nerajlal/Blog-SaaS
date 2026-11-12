@@ -160,6 +160,9 @@ class BlogForm(forms.ModelForm):
         help_text="Use letters, numbers, hyphens or underscores. Leave blank for an automatic slug. Changing a published slug changes its API URL; update links and redirects on your website.",
     )
     editor_revision = forms.CharField(required=False, widget=forms.HiddenInput)
+    gallery_image = forms.CharField(
+        required=False, max_length=500, widget=forms.HiddenInput
+    )
     banner_image = forms.ImageField(required=False)
     avatar_image = forms.ImageField(required=False)
     seo_title = forms.CharField(required=False, max_length=255)
@@ -250,6 +253,23 @@ class BlogForm(forms.ModelForm):
 
     def __init__(self, *args, project, **kwargs):
         super().__init__(*args, **kwargs)
+        self.project = project
+        from .gallery_picker import image_available
+        from .services import image_url
+
+        selected = (
+            self.data.get(self.add_prefix("gallery_image"), "") if self.is_bound else ""
+        )
+        self.gallery_preview_url = image_url(
+            selected
+            if image_available(project, selected)
+            else self.instance.cover_image,
+            project.seo_settings,
+        )
+        self.gallery_current_url = image_url(
+            self.instance.cover_image, project.seo_settings
+        )
+
         if not self.instance.pk:
             self.initial["status"] = "published"
         for name, label in {
@@ -303,6 +323,19 @@ class BlogForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        from .gallery_picker import image_available
+
+        selected = data.get("gallery_image")
+        if selected and not image_available(self.project, selected):
+            self.add_error(
+                "gallery_image", "Choose an image from this workspace's gallery."
+            )
+        if selected and data.get("banner_image"):
+            self.add_error(
+                "gallery_image",
+                "Choose a gallery image or upload a new image, not both.",
+            )
+
         if data.get("status") == "scheduled" and (
             not data.get("published_at") or data["published_at"] <= timezone.now()
         ):
@@ -330,6 +363,43 @@ class BlogForm(forms.ModelForm):
 
 class SectionForm(forms.ModelForm):
     image = forms.ImageField(required=False)
+
+    gallery_image = forms.CharField(
+        required=False, max_length=500, widget=forms.HiddenInput
+    )
+
+    def __init__(self, *args, project=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.project = project
+        from .gallery_picker import image_available
+        from .services import image_url
+
+        selected = (
+            self.data.get(self.add_prefix("gallery_image"), "") if self.is_bound else ""
+        )
+        defaults = project.seo_settings if project else {}
+        self.gallery_current_url = image_url(self.instance.image_path, defaults)
+        self.gallery_preview_url = (
+            image_url(selected, defaults)
+            if image_available(project, selected)
+            else self.gallery_current_url
+        )
+
+    def clean(self):
+        data = super().clean()
+        from .gallery_picker import image_available
+
+        selected = data.get("gallery_image")
+        if selected and not image_available(self.project, selected):
+            self.add_error(
+                "gallery_image", "Choose an image from this workspace's gallery."
+            )
+        if selected and data.get("image"):
+            self.add_error(
+                "gallery_image",
+                "Choose a gallery image or upload a new image, not both.",
+            )
+        return data
 
     class Meta:
         model = BlogSection

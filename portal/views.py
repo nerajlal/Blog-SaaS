@@ -588,7 +588,11 @@ def edit_blog(request, pk=None, blog_id=None):
         request.POST or None, request.FILES or None, instance=blog, project=project
     )
     sections = SectionFormSet(
-        request.POST or None, request.FILES or None, instance=blog, prefix="sections"
+        request.POST or None,
+        request.FILES or None,
+        instance=blog,
+        prefix="sections",
+        form_kwargs={"project": project},
     )
     status = 200
     if request.method == "POST" and form.is_valid() and sections.is_valid():
@@ -652,6 +656,8 @@ def edit_blog(request, pk=None, blog_id=None):
                         value = save_image(form.cleaned_data[source], folder)
                         uploaded.append(value)
                         setattr(saved, field, value)
+                if form.cleaned_data.get("gallery_image"):
+                    saved.cover_image = form.cleaned_data["gallery_image"]
                 saved.revision += 1
                 saved.save()
                 sections.instance = saved
@@ -664,6 +670,8 @@ def edit_blog(request, pk=None, blog_id=None):
                             section_form.cleaned_data["image"], "sections"
                         )
                         uploaded.append(section.image_path)
+                    if section_form and section_form.cleaned_data.get("gallery_image"):
+                        section.image_path = section_form.cleaned_data["gallery_image"]
                     section.blog = saved
                     section.save()
                 for deleted in sections.deleted_objects:
@@ -770,7 +778,7 @@ def blog_action(request, blog_id, action):
 @require_http_methods(["GET", "POST", "DELETE"])
 def autosave(request, blog_id):
     blog = get_object_or_404(Blog, pk=blog_id)
-    project_for(request, blog.project_id, "update")
+    project = project_for(request, blog.project_id, "update")
     if request.method == "GET":
         saved = BlogAutosave.objects.filter(blog=blog, user=request.user).first()
         return JsonResponse(
@@ -820,6 +828,7 @@ def autosave(request, blog_id):
             "image_credits",
             "cover_image_alt",
             "cover_image_caption",
+            "gallery_image",
             "sections",
         ]
         snapshot = {k: v for k, v in snapshot.items() if k in allowed}
@@ -836,10 +845,20 @@ def autosave(request, blog_id):
                     "text_content": clean_html(str(row.get("text_content", ""))),
                     "image_alt": str(row.get("image_alt", ""))[:500],
                     "image_caption": str(row.get("image_caption", ""))[:2000],
+                    "gallery_image": str(row.get("gallery_image", ""))[:500],
                 }
                 for row in snapshot["sections"]
                 if isinstance(row, dict)
             ]
+        if "gallery_image" in snapshot:
+            snapshot["gallery_image"] = str(snapshot["gallery_image"] or "")[:500]
+        from .gallery_picker import image_available
+
+        references = [snapshot.get("gallery_image", "")] + [
+            row.get("gallery_image", "") for row in snapshot.get("sections", [])
+        ]
+        if any(not image_available(project, path) for path in set(references) if path):
+            raise ValidationError("Choose images from this workspace's gallery.")
         saved.snapshot = snapshot
         saved.base_hash = revision(current)
         saved.version += 1

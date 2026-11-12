@@ -6,7 +6,7 @@
     <details>
       <summary><span data-section-number>Section</span> · Content &amp; image <small data-section-position></small></summary>
       <div class="form-stack">
-        {% include 'portal/field.html' with field=section.image %}
+        {% include 'portal/gallery_field.html' with upload=section.image selection=section.gallery_image preview_url=section.gallery_preview_url current_url=section.gallery_current_url %}
         {% include 'portal/field.html' with field=section.image_alt %}
         {% include 'portal/field.html' with field=section.image_caption %}
         <div class="section-rich-text-field">

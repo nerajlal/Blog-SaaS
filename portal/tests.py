@@ -3172,3 +3172,142 @@ class GalleryUploadTests(TestCase):
             )
             self.assertEqual(GalleryImage.objects.count(), 0)
             self.assertFalse(any(path.is_file() for path in Path(directory).rglob("*")))
+
+
+class GalleryPickerTests(TestCase):
+    setUp = PortalTests.setUp
+
+    def asset(self):
+        return GalleryImage.objects.create(
+            workspace=self.ws,
+            uploaded_by=self.owner,
+            path="/storage/blogs/gallery/reuse.webp",
+            name="Reusable image.webp",
+        )
+
+    def test_create_post_reuses_gallery_image_for_featured_and_section(self):
+        asset = self.asset()
+        data = {
+            "title": "Reuse gallery image",
+            "category": self.category.pk,
+            "status": "draft",
+            "content": "<p>Main post</p>",
+            "gallery_image": asset.path,
+            "sections-TOTAL_FORMS": "1",
+            "sections-INITIAL_FORMS": "0",
+            "sections-0-gallery_image": asset.path,
+            "sections-0-text_content": "<p>Section text</p>",
+            "sections-0-order": "0",
+        }
+        with patch("portal.views.save_image") as upload:
+            response = self.client.post(
+                reverse("create_blog", args=[self.project.pk]), data
+            )
+            upload.assert_not_called()
+        self.assertEqual(response.status_code, 302)
+        blog = Blog.objects.get(title="Reuse gallery image")
+        self.assertEqual(blog.cover_image, asset.path)
+        self.assertEqual(blog.sections.get().image_path, asset.path)
+        self.assertEqual(GalleryImage.objects.count(), 1)
+        response = self.client.get(reverse("edit_blog", args=[blog.pk]))
+        self.assertContains(response, "Choose from gallery")
+        self.assertContains(response, asset.path)
+
+    def test_picker_and_form_reject_cross_workspace_images(self):
+        asset = self.asset()
+        other_ws = Workspace.objects.create(
+            owner=self.owner, name="Other media workspace", slug="other-media"
+        )
+        foreign = GalleryImage.objects.create(
+            workspace=other_ws,
+            uploaded_by=self.owner,
+            path="/storage/foreign.webp",
+            name="Foreign",
+        )
+        self.owner.author_avatar = "/storage/profile-only.webp"
+        self.owner.save()
+        response = self.client.get(reverse("gallery_picker", args=[self.project.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [row["path"] for row in response.json()["images"]], [asset.path]
+        )
+        from .forms import BlogForm, SectionForm
+
+        form = BlogForm(
+            {
+                "title": "Invalid media",
+                "category": self.category.pk,
+                "status": "draft",
+                "gallery_image": foreign.path,
+            },
+            instance=Blog(project=self.project, user=self.owner),
+            project=self.project,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("gallery_image", form.errors)
+        section = SectionForm({"gallery_image": foreign.path}, project=self.project)
+        self.assertFalse(section.is_valid())
+        viewer = User.objects.create_user(
+            username="picker-viewer", email="picker-viewer@example.com"
+        )
+        Membership.objects.create(workspace=self.ws, user=viewer, role="viewer")
+        self.client.force_login(viewer)
+        self.assertEqual(
+            self.client.get(
+                reverse("gallery_picker", args=[self.project.pk])
+            ).status_code,
+            403,
+        )
+
+    def test_gallery_selection_survives_autosave_and_rejects_invalid_reference(self):
+        asset = self.asset()
+        url = reverse("autosave", args=[self.blog.pk])
+        payload = {
+            "version": 0,
+            "base_hash": revision(self.blog),
+            "snapshot": {
+                "gallery_image": asset.path,
+                "sections": [
+                    {
+                        "section_id": str(self.blog.sections.get().pk),
+                        "gallery_image": asset.path,
+                    }
+                ],
+            },
+        }
+        response = self.client.post(
+            url, json.dumps(payload), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, 200)
+        restored = self.client.get(url).json()["snapshot"]
+        self.assertEqual(restored["gallery_image"], asset.path)
+        self.assertEqual(restored["sections"][0]["gallery_image"], asset.path)
+        payload["version"] = response.json()["version"]
+        payload["snapshot"]["gallery_image"] = "/storage/unavailable.webp"
+        self.assertEqual(
+            self.client.post(
+                url, json.dumps(payload), content_type="application/json"
+            ).status_code,
+            400,
+        )
+
+    def test_cannot_submit_new_upload_and_gallery_selection_together(self):
+        from PIL import Image
+        from .forms import BlogForm
+
+        asset = self.asset()
+        image = io.BytesIO()
+        Image.new("RGB", (10, 10), "red").save(image, format="PNG")
+        form = BlogForm(
+            {
+                "title": "Two images",
+                "category": self.category.pk,
+                "status": "draft",
+                "gallery_image": asset.path,
+            },
+            files={"banner_image": SimpleUploadedFile("image.png", image.getvalue())},
+            instance=Blog(project=self.project, user=self.owner),
+            project=self.project,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("gallery_image", form.errors)
