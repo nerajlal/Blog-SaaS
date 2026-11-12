@@ -80,6 +80,46 @@ class PortalTests(TestCase):
         self.client.post(url, {"email": "unregistered@example.com"})
         self.assertFalse(User.objects.filter(email="unregistered@example.com").exists())
 
+    def test_staff_multi_workspace_selection_rejects_unmanaged_workspaces(self):
+        staff = User.objects.create_user(
+            username="multi@example.com", email="multi@example.com"
+        )
+        other = Workspace.objects.create(
+            owner=staff, name="Private", slug="private-staff-test"
+        )
+        url = reverse("workspace_add_staff", args=[self.ws.pk])
+        response = self.client.post(
+            url,
+            {
+                "email": staff.email,
+                "workspace_selection": "1",
+                "workspaces": [self.ws.pk, other.pk],
+            },
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(
+            Membership.objects.filter(workspace=self.ws, user=staff).exists()
+        )
+        Membership.objects.create(workspace=other, user=self.owner, role="admin")
+        response = self.client.post(
+            url,
+            {
+                "email": staff.email,
+                "workspace_selection": "1",
+                "workspaces": [self.ws.pk, other.pk],
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            Membership.objects.filter(user=staff, role="editor").count(), 2
+        )
+        self.assertEqual(
+            self.client.post(
+                url, {"email": staff.email, "workspace_selection": "1"}
+            ).status_code,
+            400,
+        )
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,

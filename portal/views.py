@@ -2153,6 +2153,21 @@ def workspace_add_staff(request, pk):
         workspace=workspace, user=request.user, role__in=["owner", "admin"]
     ).exists():
         raise PermissionDenied
+    selected_ids = request.POST.getlist("workspaces")
+    if not selected_ids:
+        selected_ids = [str(pk)] if "workspace_selection" not in request.POST else []
+    if not selected_ids or any(not value.isdigit() for value in selected_ids):
+        raise ValidationError("Select at least one workspace.")
+    selected_ids = {int(value) for value in selected_ids}
+    allowed_ids = set(
+        Membership.objects.filter(
+            user=request.user,
+            role__in=["owner", "admin"],
+            workspace_id__in=selected_ids,
+        ).values_list("workspace_id", flat=True)
+    )
+    if selected_ids != allowed_ids:
+        raise PermissionDenied
     from django.core.validators import validate_email
 
     email = request.POST.get("email", "").strip().lower()
@@ -2166,13 +2181,13 @@ def workspace_add_staff(request, pk):
             "Ask this staff member to register with that email first, then add them here.",
         )
         return redirect("projects")
-    _, created = Membership.objects.get_or_create(
-        workspace=workspace, user=staff, defaults={"role": "editor"}
-    )
+    with transaction.atomic():
+        for workspace_id in selected_ids:
+            Membership.objects.get_or_create(
+                workspace_id=workspace_id, user=staff, defaults={"role": "editor"}
+            )
     messages.success(
         request,
-        "Staff access added. They can sign in and select this workspace."
-        if created
-        else "This person already has workspace access.",
+        "Staff access saved for the selected workspaces. They can select them in their sidebar.",
     )
     return redirect("projects")

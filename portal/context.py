@@ -45,7 +45,18 @@ def navigation(request):
     active = groups.get(route, "projects")
     if route in ["batches", "batch_operation", "batch_action"]:
         active = match.kwargs.get("kind", "metadata")
+    managed = workspaces.filter(
+        memberships__user=request.user, memberships__role__in=["owner", "admin"]
+    ).distinct()
+    staff_memberships = (
+        Membership.objects.filter(workspace__in=managed)
+        .exclude(role="owner")
+        .select_related("user", "workspace")
+        .order_by("user__email", "workspace__name")
+    )
     return {
+        "managed_workspaces": managed,
+        "staff_memberships": staff_memberships,
         "sidebar_active": active,
         "workspaces": workspaces,
         "editable_workspace_ids": set(
