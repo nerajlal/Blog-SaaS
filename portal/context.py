@@ -13,6 +13,7 @@ def navigation(request):
     route = match.url_name if match else ""
     groups = {
         "projects": "projects",
+        "gallery": "gallery",
         "superadmin": "superadmin",
         "superadmin_usage_export": "superadmin",
         "project": "blogs",

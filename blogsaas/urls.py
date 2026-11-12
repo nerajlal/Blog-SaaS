@@ -1,3 +1,4 @@
+from portal import gallery as gallery_views
 from portal import import_views
 from portal import hosted
 from django.conf import settings
@@ -11,6 +12,7 @@ from portal import superadmin
 from portal.auth_views import LimitedPasswordResetView
 
 urlpatterns = [
+    path("admin/gallery", gallery_views.gallery, name="gallery"),
     path(
         "admin/projects/<int:pk>/posts/import", import_views.upload, name="post_import"
     ),

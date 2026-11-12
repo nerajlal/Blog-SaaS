@@ -465,3 +465,19 @@ class PostImport(Timestamped):
     payload = EncryptedJSONField(default=dict)
     results = models.JSONField(default=dict)
     confirmed_at = models.DateTimeField(null=True, blank=True)
+
+
+class GalleryImage(Timestamped):
+    workspace = models.ForeignKey(
+        Workspace, on_delete=models.CASCADE, related_name="gallery_images"
+    )
+    project = models.ForeignKey(
+        Project,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="gallery_images",
+    )
+    uploaded_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    path = models.CharField(max_length=500, unique=True)
+    name = models.CharField(max_length=255)

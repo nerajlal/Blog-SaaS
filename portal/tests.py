@@ -677,6 +677,76 @@ class PortalTests(TestCase):
             "No featured image",
         )
 
+    def test_gallery_deduplicates_images_and_scopes_to_current_workspace(self):
+        self.blog.cover_image = "/storage/shared.webp"
+        self.blog.author_avatar = "/storage/avatar.webp"
+        self.blog.save()
+        section = self.blog.sections.get()
+        section.image_path = "/storage/shared.webp"
+        section.save()
+        self.owner.author_avatar = "/storage/avatar.webp"
+        self.owner.save()
+        other_user = User.objects.create_user(
+            username="gallery-other", email="gallery-other@example.com"
+        )
+        other_ws = Workspace.objects.create(
+            owner=other_user, name="Private workspace", slug="gallery-private"
+        )
+        other_project = Project.objects.create(
+            user=other_user, workspace=other_ws, name="Private project"
+        )
+        Blog.objects.create(
+            user=other_user,
+            project=other_project,
+            title="Private post",
+            cover_image="/storage/private-image.webp",
+        )
+        response = self.client.get(reverse("gallery"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page"].paginator.count, 1)
+        self.assertContains(response, "shared.webp")
+        self.assertNotContains(response, "private-image.webp")
+        assets = {asset["path"]: asset for asset in response.context["assets"]}
+        self.assertEqual(assets["/storage/shared.webp"]["count"], 2)
+        self.assertEqual(len(assets["/storage/shared.webp"]["uses"]), 1)
+        self.assertContains(response, "sidebar-gallery-link is-current")
+        self.assertEqual(
+            self.client.get(
+                reverse("gallery"), {"project": other_project.pk}
+            ).status_code,
+            404,
+        )
+        response = self.client.get(
+            reverse("gallery"), {"type": "section", "q": self.blog.title}
+        )
+        self.assertEqual(response.context["page"].paginator.count, 1)
+        self.assertIn("Section image", response.context["assets"][0]["types"])
+        self.assertNotContains(response, "avatar.webp")
+
+    def test_gallery_paginates_and_allows_viewers_without_private_workspace_leaks(self):
+        for index in range(26):
+            Blog.objects.create(
+                project=self.project,
+                user=self.owner,
+                title="Image " + str(index),
+                cover_image="/storage/image-" + str(index) + ".webp",
+            )
+        viewer = User.objects.create_user(
+            username="gallery-viewer",
+            email="gallery-viewer@example.com",
+            current_workspace=self.ws,
+        )
+        Membership.objects.create(workspace=self.ws, user=viewer, role="viewer")
+        self.client.force_login(viewer)
+        response = self.client.get(reverse("gallery"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["assets"]), 24)
+        self.assertEqual(response.context["page"].paginator.count, 26)
+        self.assertEqual(
+            len(self.client.get(reverse("gallery"), {"page": 2}).context["assets"]), 2
+        )
+        self.assertEqual(self.client.post(reverse("gallery")).status_code, 403)
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,
@@ -2974,3 +3044,131 @@ class ExcelImportTests(TestCase):
             self.assertFalse(any(path.is_file() for path in Path(directory).rglob("*")))
         batch.refresh_from_db()
         self.assertEqual(batch.results["0"]["state"], "failed")
+
+
+class GalleryUploadTests(TestCase):
+    setUp = PortalTests.setUp
+
+    def image(self, name="gallery.png"):
+        from PIL import Image
+
+        output = io.BytesIO()
+        Image.new("RGBA", (80, 40), (255, 0, 0, 0)).save(output, format="PNG")
+        return SimpleUploadedFile(name, output.getvalue(), content_type="image/png")
+
+    def test_gallery_direct_uploads_are_webp_and_workspace_scoped(self):
+        from PIL import Image
+
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            override_settings(MEDIA_ROOT=directory),
+        ):
+            response = self.client.post(
+                reverse("gallery"),
+                {
+                    "images": [self.image("one.png"), self.image("two.png")],
+                    "project": self.project.pk,
+                },
+            )
+            self.assertEqual(response.status_code, 302)
+            self.assertIn("type=uploaded", response.url)
+            records = list(GalleryImage.objects.filter(workspace=self.ws))
+            self.assertEqual(len(records), 2)
+            for record in records:
+                self.assertEqual(record.project_id, self.project.pk)
+                self.assertTrue(record.path.endswith(".webp"))
+                self.assertTrue(record.name.endswith(".webp"))
+                with default_storage.open(
+                    record.path.removeprefix(settings.MEDIA_URL), "rb"
+                ) as saved:
+                    image = Image.open(saved)
+                    self.assertEqual(image.format, "WEBP")
+                    self.assertEqual(image.getpixel((0, 0))[3], 0)
+            response = self.client.get(
+                reverse("gallery"), {"type": "uploaded", "q": "one.webp"}
+            )
+            self.assertEqual(response.context["page"].paginator.count, 1)
+            self.assertContains(response, "Not attached to a post yet")
+            self.assertContains(response, "Copy URL")
+            self.assertEqual(
+                self.client.get(reverse("gallery"), {"project": self.project.pk})
+                .context["page"]
+                .paginator.count,
+                2,
+            )
+            outsider = User.objects.create_user(
+                username="gallery-upload-outsider",
+                email="gallery-upload-outsider@example.com",
+            )
+            other = Workspace.objects.create(
+                owner=outsider, name="Other", slug="gallery-upload-other"
+            )
+            Membership.objects.create(workspace=other, user=outsider, role="owner")
+            outsider.current_workspace = other
+            outsider.save()
+            self.client.force_login(outsider)
+            self.assertEqual(
+                self.client.get(reverse("gallery")).context["page"].paginator.count, 0
+            )
+
+    def test_gallery_upload_rejects_invalid_files_and_foreign_projects(self):
+        self.assertEqual(
+            self.client.post(
+                reverse("gallery"), {"images": SimpleUploadedFile("bad.svg", b"<svg/>")}
+            ).status_code,
+            400,
+        )
+        self.assertEqual(GalleryImage.objects.count(), 0)
+        foreign = Project.objects.create(user=self.owner, name="Foreign project")
+        self.assertEqual(
+            self.client.post(
+                reverse("gallery"), {"images": self.image(), "project": foreign.pk}
+            ).status_code,
+            400,
+        )
+        self.assertEqual(GalleryImage.objects.count(), 0)
+        self.assertEqual(
+            self.client.post(
+                reverse("gallery"),
+                {"images": [self.image(str(i) + ".png") for i in range(6)]},
+            ).status_code,
+            400,
+        )
+
+    def test_gallery_does_not_list_profile_photos(self):
+        self.owner.author_avatar = "/storage/profile-only.webp"
+        self.owner.save()
+        self.blog.author_avatar = "/storage/post-author-only.webp"
+        self.blog.save()
+        response = self.client.get(reverse("gallery"))
+        self.assertEqual(response.context["page"].paginator.count, 0)
+        self.assertNotContains(response, "profile-only.webp")
+        self.assertNotContains(response, "post-author-only.webp")
+        self.assertNotContains(response, "Author photos")
+
+    def test_gallery_failed_batch_cleans_up_prior_files(self):
+        from pathlib import Path
+
+        calls = []
+
+        def save_or_fail(upload, folder):
+            if calls:
+                raise OSError("Storage unavailable")
+            path = save_image(upload, folder)
+            calls.append(path)
+            return path
+
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            override_settings(MEDIA_ROOT=directory),
+            patch("portal.gallery.save_image", side_effect=save_or_fail),
+        ):
+            self.assertEqual(
+                self.client.post(
+                    reverse("gallery"),
+                    {"images": [self.image("one.png"), self.image("two.png")]},
+                ).status_code,
+                400,
+            )
+            self.assertEqual(GalleryImage.objects.count(), 0)
+            self.assertFalse(any(path.is_file() for path in Path(directory).rglob("*")))
