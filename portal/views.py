@@ -2143,3 +2143,36 @@ def api_not_found(request):
     except (ValidationError, ValueError, KeyError):
         return JsonResponse({"error": "Invalid telemetry payload."}, status=422)
     return HttpResponse(status=204)
+
+
+@page
+@require_POST
+def workspace_add_staff(request, pk):
+    workspace = get_object_or_404(Workspace, pk=pk)
+    if not Membership.objects.filter(
+        workspace=workspace, user=request.user, role__in=["owner", "admin"]
+    ).exists():
+        raise PermissionDenied
+    from django.core.validators import validate_email
+
+    email = request.POST.get("email", "").strip().lower()
+    validate_email(email)
+    staff = User.objects.filter(
+        email__iexact=email, is_active=True, is_superuser=False
+    ).first()
+    if not staff:
+        messages.error(
+            request,
+            "Ask this staff member to register with that email first, then add them here.",
+        )
+        return redirect("projects")
+    _, created = Membership.objects.get_or_create(
+        workspace=workspace, user=staff, defaults={"role": "editor"}
+    )
+    messages.success(
+        request,
+        "Staff access added. They can sign in and select this workspace."
+        if created
+        else "This person already has workspace access.",
+    )
+    return redirect("projects")

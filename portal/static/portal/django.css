@@ -263,3 +263,7 @@
 .post-editor-layout .editor-right-sidebar .editor-publish-card .two-columns{grid-template-columns:minmax(0,1fr);gap:16px}
 .post-editor-layout .editor-right-sidebar .editor-publish-heading{font-size:15px}
 .post-editor-layout .editor-right-sidebar .editor-publish-card>.button{width:100%;justify-self:stretch}
+
+.sidebar-settings-gear{display:inline-flex;align-items:center;justify-content:center;color:#71818b;width:30px;height:30px}
+
+button.sidebar-settings-gear{border:0;background:transparent;border-radius:8px}button.sidebar-settings-gear:hover{background:#edf3ff;color:#2862f4}

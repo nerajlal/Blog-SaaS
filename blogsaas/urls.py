@@ -57,6 +57,9 @@ urlpatterns = [
     ),
     path("workspaces/<int:pk>/rename", v.workspace_rename, name="workspace_rename"),
     path("admin/profile", v.author_profile, name="author_profile"),
+    path(
+        "workspaces/<int:pk>/staff", v.workspace_add_staff, name="workspace_add_staff"
+    ),
     path("workspaces", v.workspace_action, name="workspace_create"),
     path("workspaces/<int:pk>/switch", v.workspace_action, name="workspace_switch"),
     path("admin/login", v.sign_in, name="admin_login"),

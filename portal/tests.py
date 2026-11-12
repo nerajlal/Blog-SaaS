@@ -53,6 +53,33 @@ class PortalTests(TestCase):
         )
         self.client.force_login(self.owner)
 
+    def test_workspace_staff_access_is_scoped_and_management_only(self):
+        staff = User.objects.create_user(
+            username="staff@example.com",
+            email="staff@example.com",
+            password="StaffPassword492!",
+        )
+        url = reverse("workspace_add_staff", args=[self.ws.pk])
+        response = self.client.post(url, {"email": "STAFF@example.com"})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            Membership.objects.get(workspace=self.ws, user=staff).role, "editor"
+        )
+        self.client.post(url, {"email": self.owner.email})
+        self.assertEqual(
+            Membership.objects.get(workspace=self.ws, user=self.owner).role, "owner"
+        )
+        self.client.force_login(staff)
+        self.assertEqual(
+            self.client.post(url, {"email": self.owner.email}).status_code, 403
+        )
+        self.assertEqual(
+            self.client.get(reverse("project", args=[self.project.pk])).status_code, 200
+        )
+        self.client.force_login(self.owner)
+        self.client.post(url, {"email": "unregistered@example.com"})
+        self.assertFalse(User.objects.filter(email="unregistered@example.com").exists())
+
     def profile(self):
         profile = AiProfile.objects.create(
             project=self.project,
