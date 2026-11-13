@@ -160,3 +160,5 @@ body{padding-top:75px}
 .site-header .button,.agency-hero .button,.workflow-cta .button,.final-cta .button{border:0;border-radius:30px;box-shadow:none}
 .site-header .button:hover,.agency-hero .button:hover,.workflow-cta .button:hover,.final-cta .button:hover{transform:translateY(-1px);box-shadow:none}
 .site-header .button.primary:hover,.agency-hero .button.primary:hover,.workflow-cta .button.primary:hover,.final-cta .button.primary:hover{background:#2344df;box-shadow:none}
+.agency-hero .button-row .text-link{display:inline-flex;align-items:center;justify-content:center;min-height:47px;padding:12px 18px;border:1px solid var(--blue);border-radius:30px;color:var(--blue);font-weight:550;transition:background .2s,color .2s}
+.agency-hero .button-row .text-link:hover{background:#edf2ff;color:#2344df}
