@@ -66,9 +66,10 @@
       <aside class="public-post-sidebar" aria-label="About the author">
         <section class="public-post-author">
           <span class="public-post-author-label">ABOUT THE AUTHOR</span>
-          {% if author_avatar %}<img class="public-post-author-avatar" src="{{ author_avatar }}" alt="{{ blog.author_name|default:'Post author' }}" width="76" height="76">{% else %}<span class="public-post-author-avatar public-post-author-initial" aria-hidden="true">{{ blog.author_name|default:'W'|first|upper }}</span>{% endif %}
-          <h2>{{ blog.author_name|default:'WritePost team' }}</h2>
-          {% if blog.author_title %}<p class="public-post-author-title">{{ blog.author_title }}</p>{% endif %}
+          <div class="public-post-author-identity">
+            {% if author_avatar %}<img class="public-post-author-avatar" src="{{ author_avatar }}" alt="{{ blog.author_name|default:'Post author' }}" width="76" height="76">{% else %}<span class="public-post-author-avatar public-post-author-initial" aria-hidden="true">{{ blog.author_name|default:'W'|first|upper }}</span>{% endif %}
+            <div class="public-post-author-heading"><h2>{{ blog.author_name|default:'WritePost team' }}</h2>{% if blog.author_title %}<p class="public-post-author-title">{{ blog.author_title }}</p>{% endif %}</div>
+          </div>
           {% if blog.author_bio %}<p class="public-post-author-bio">{{ blog.author_bio|linebreaksbr }}</p>{% else %}<p class="public-post-author-bio">More about the people behind this post.</p>{% endif %}
           {% if blog.author_social_links %}<nav class="public-post-author-links" aria-label="Author social profiles">{% for platform,url in blog.author_social_links.items %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer me">{{ platform|title }} ↗</a>{% endfor %}</nav>{% endif %}
         </section>
