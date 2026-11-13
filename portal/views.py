@@ -220,6 +220,16 @@ def public_blog_post(request, slug):
         .prefetch_related("sections"),
         slug=slug,
     )
+    recent_posts = [
+        writepost_blog_card(post)
+        for post in (
+            blog_project.blogs.live()
+            .exclude(pk=blog.pk)
+            .select_related("category")
+            .prefetch_related("sections")
+            .order_by("-published_at", "-id")[:3]
+        )
+    ]
     canonical = request.build_absolute_uri(
         reverse("public_blog_post", args=[blog.slug])
     )
@@ -257,6 +267,7 @@ def public_blog_post(request, slug):
         "portal/public_blog_post.html",
         {
             "blog": blog,
+            "recent_posts": recent_posts,
             "content": clean_html(blog.content),
             "sections": sections,
             "cover": cover,

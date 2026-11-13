@@ -89,6 +89,19 @@
         </section>
       </aside>
     </div>
+    {% if recent_posts %}
+      <section class="public-post-recent" aria-labelledby="public-post-recent-title">
+        <div class="writepost-blog-heading"><div><span class="eyebrow">KEEP READING</span><h2 id="public-post-recent-title">Recent posts</h2></div><a class="writepost-blog-read" href="{% url 'public_blog' %}">All posts ↗</a></div>
+        <div class="writepost-blog-grid">
+          {% for post in recent_posts %}
+            <article class="writepost-blog-card">
+              <a class="writepost-blog-image" href="{{ post.url }}" aria-label="Read {{ post.title }}">{% if post.image %}<img src="{{ post.image }}" alt="{{ post.image_alt }}" loading="lazy">{% else %}<span aria-hidden="true">W</span>{% endif %}</a>
+              <div class="writepost-blog-card-copy"><div class="writepost-blog-meta">{% if post.category %}<span>{{ post.category }}</span>{% endif %}<time datetime="{{ post.published_at|date:'c' }}">{{ post.published_at|date:'M j, Y' }}</time></div><h3><a href="{{ post.url }}">{{ post.title }}</a></h3>{% if post.excerpt %}<p>{{ post.excerpt|truncatechars:160 }}</p>{% endif %}<a class="writepost-blog-read" href="{{ post.url }}">Read post <span aria-hidden="true">↗</span></a></div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
     <section class="public-post-cta"><span class="eyebrow">WRITEPOST</span><h2>Make room for your next idea.</h2><p>Plan, write and manage posts for every client in one workspace.</p><a class="button primary" href="{% url 'register' %}">Get started ↗</a></section>
   </main>
   <footer class="wrap site-footer"><div><a class="brand" href="{% url 'home' %}">{% include 'portal/brand_logo.html' %}</a><p>Your business. Your voice. Your own website.</p></div><nav aria-label="Footer"><a href="{% url 'home' %}#features">Features</a><a href="{% url 'public_blog' %}" aria-current="page">Blog</a><a href="{% url 'admin_docs' %}">API &amp; Docs</a><a href="{% url 'login' %}">Log in</a><a href="{% url 'register' %}">Get started ↗</a></nav><div class="footer-bottom"><span>© {% now 'Y' %} WritePost</span><span>Built for posts that go places.</span></div></footer>
