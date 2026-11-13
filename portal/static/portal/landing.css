@@ -107,3 +107,13 @@ body{padding-top:75px}
 @media(max-width:767px){.site-header .writepost-logo{width:144px;height:40px}.site-footer .writepost-logo{width:160px;height:45px}}
 
 .diagram-logo{display:block;width:140px;height:39px;object-fit:contain}@media(max-width:767px){.diagram-logo{width:120px;height:34px}}
+
+/* Keep the two-column hero comfortable on small tablets. */
+@media(min-width:768px) and (max-width:860px){.agency-hero-grid{grid-template-columns:minmax(0,1fr);gap:36px}.agency-hero-copy{max-width:650px}.publishing-diagram{max-width:600px;margin-inline:auto}}
+/* Keep the full header usable on narrow phones; login remains in the menu. */
+@media(max-width:400px){.site-header{width:calc(100% - 24px);gap:8px}.site-header .writepost-logo{width:118px;height:auto}.header-actions{gap:8px}.header-actions>a:first-child{display:none}.header-actions .compact{padding:6px 10px;font-size:10px;min-height:34px}.menu-toggle{margin-right:2px;padding-inline:3px}}
+/* Make labels in the client-site diagram readable at phone sizes. */
+.diagram-project{font-size:8px}
+.diagram-site>span:last-child{font-size:9px}
+.diagram-caption{font-size:10px}
+@media(max-width:767px){.diagram-project{font-size:8px;letter-spacing:.2px}.diagram-site strong{font-size:10px}.diagram-site>span:last-child{font-size:9px}.diagram-caption{font-size:10px}}
