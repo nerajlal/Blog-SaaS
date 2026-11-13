@@ -142,7 +142,9 @@ body{padding-top:75px}
 .public-blog-intro h1{font-size:clamp(38px,5vw,58px);margin:14px 0}
 .public-blog-intro p{max-width:58ch;font-size:16px}
 .public-blog-grid{row-gap:24px}
-.public-blog-card h2{font-size:18px;line-height:1.35;margin:12px 0}
+.public-blog-grid .writepost-blog-card h2{font-size:clamp(17px,1.45vw,20px);line-height:1.35;letter-spacing:-.025em;margin:12px 0}
+.public-blog-grid .writepost-blog-card h2 a{color:inherit}
+.public-blog-grid .writepost-blog-card h2 a:hover{color:var(--blue)}
 .public-blog-empty{padding:50px 28px;background:white;border:1px solid var(--line);border-radius:16px;text-align:center}
 .public-blog-empty h2{font-size:25px;margin:0 0 10px}
 .public-blog-empty p{margin:0}
