@@ -158,7 +158,7 @@ def writepost_blog_card(blog):
     summary = strip_tags(blog.excerpt or blog.content or section_text)
     return {
         "title": blog.title,
-        "url": article_url(blog),
+        "url": reverse("public_blog_post", args=[blog.slug]),
         "excerpt": " ".join(summary.split()),
         "image": image_url(blog.cover_image, blog.project.seo_settings),
         "image_alt": blog.cover_image_alt or blog.title,
@@ -206,6 +206,69 @@ def public_blog(request):
         request,
         "portal/public_blog.html",
         {"posts": posts, "page": page},
+    )
+
+
+@require_GET
+def public_blog_post(request, slug):
+    blog_project = writepost_blog_project()
+    if not blog_project:
+        raise Http404
+    blog = get_object_or_404(
+        blog_project.blogs.live()
+        .select_related("category", "user")
+        .prefetch_related("sections"),
+        slug=slug,
+    )
+    canonical = request.build_absolute_uri(
+        reverse("public_blog_post", args=[blog.slug])
+    )
+    seo = seo_payload(blog)
+    cover = image_url(blog.cover_image, blog.project.seo_settings)
+    sections = [
+        {
+            "html": clean_html(section.text_content),
+            "image": image_url(section.image_path, blog.project.seo_settings),
+            "alt": section.image_alt,
+            "caption": section.image_caption,
+        }
+        for section in blog.sections.all()
+    ]
+    schema = {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "mainEntityOfPage": {"@type": "WebPage", "@id": canonical},
+        "headline": blog.title,
+        "description": seo["description"],
+        "url": canonical,
+        "dateModified": blog.updated_at.isoformat(),
+        "author": {
+            "@type": "Person",
+            "name": blog.author_name or blog.user.first_name or "WritePost team",
+        },
+        "publisher": {"@type": "Organization", "name": "WritePost"},
+    }
+    if blog.published_at:
+        schema["datePublished"] = blog.published_at.isoformat()
+    if cover:
+        schema["image"] = [cover]
+    return render(
+        request,
+        "portal/public_blog_post.html",
+        {
+            "blog": blog,
+            "content": clean_html(blog.content),
+            "sections": sections,
+            "cover": cover,
+            "canonical": canonical,
+            "seo_title": seo["title"],
+            "description": seo["description"],
+            "robots_index": seo["robots"]["index"],
+            "schema_json": json.dumps(schema)
+            .replace("<", "\\u003C")
+            .replace(">", "\\u003E")
+            .replace("&", "\\u0026"),
+        },
     )
 
 

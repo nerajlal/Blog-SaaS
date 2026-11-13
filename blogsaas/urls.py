@@ -46,6 +46,7 @@ urlpatterns = [
     ),
     path("", v.home, name="home"),
     path("blog", v.public_blog, name="public_blog"),
+    path("blog/<slug:slug>", v.public_blog_post, name="public_blog_post"),
     path(
         "admin/projects/<int:pk>/search/tools/<str:tab>",
         google_tools.hub,

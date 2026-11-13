@@ -1,0 +1,72 @@
+{% load static portal_tags %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ seo_title }}</title>
+  <meta name="description" content="{{ description }}">
+  <meta name="theme-color" content="#2B4EFF">
+  <link rel="canonical" href="{{ canonical }}">
+  <meta property="og:title" content="{{ seo_title }}">
+  <meta property="og:description" content="{{ description }}">
+  <meta property="og:url" content="{{ canonical }}">
+  <meta property="og:type" content="article">
+  {% if cover %}<meta property="og:image" content="{{ cover }}">{% endif %}
+  <meta name="twitter:card" content="{% if cover %}summary_large_image{% else %}summary{% endif %}">
+  {% if not robots_index %}<meta name="robots" content="noindex,follow">{% endif %}
+  <link rel="icon" href="{% static 'portal/favicon.svg' %}?v={% asset_version 'portal/favicon.svg' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;650;700;750;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'portal/landing.css' %}?v={% asset_version 'portal/landing.css' %}">
+  <link rel="stylesheet" href="{% static 'portal/public-blog-post.css' %}?v={% asset_version 'portal/public-blog-post.css' %}">
+  <script type="application/ld+json">{{ schema_json|safe }}</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="brand" href="{% url 'home' %}" aria-label="WritePost home">{% include 'portal/brand_logo.html' %}</a>
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <a href="{% url 'home' %}#features">Features</a><a href="{% url 'home' %}#ai">AI writing</a>
+      <a href="{% url 'home' %}#how-it-works">How it works</a><a href="{% url 'home' %}#developers">API</a>
+      <a href="{% url 'public_blog' %}" aria-current="page">Blog</a><a href="{% url 'home' %}#faq">FAQs</a>
+    </nav>
+    <div class="header-actions"><a href="{% url 'login' %}">Log in</a><a class="button primary compact" href="{% url 'register' %}">Get started <span aria-hidden="true">↗</span></a></div>
+    <button class="menu-toggle" type="button" aria-label="Open navigation" aria-controls="mobile-menu" aria-expanded="false">☰</button>
+    <nav id="mobile-menu" hidden aria-label="Mobile navigation">
+      <a href="{% url 'home' %}#features">Features</a><a href="{% url 'home' %}#ai">AI writing</a>
+      <a href="{% url 'home' %}#how-it-works">How it works</a><a href="{% url 'home' %}#developers">API</a>
+      <a href="{% url 'public_blog' %}" aria-current="page">Blog</a><a href="{% url 'home' %}#faq">FAQs</a>
+      <a href="{% url 'login' %}">Log in</a><a href="{% url 'register' %}">Get started ↗</a>
+    </nav>
+  </header>
+  <main id="main" class="wrap public-post-main">
+    <a class="public-post-back" href="{% url 'public_blog' %}">← All posts</a>
+    <article class="public-post">
+      <header class="public-post-header">
+        <div class="public-post-meta">
+          {% if blog.category %}<span>{{ blog.category.name }}</span>{% endif %}
+          {% if blog.published_at %}<time datetime="{{ blog.published_at|date:'c' }}">{{ blog.published_at|date:'M j, Y' }}</time>{% endif %}
+        </div>
+        <h1>{{ blog.title }}</h1>
+        {% if blog.excerpt %}<p class="public-post-excerpt">{{ blog.excerpt }}</p>{% endif %}
+        {% if blog.author_name or blog.author_title %}<p class="public-post-byline">{% if blog.author_name %}{{ blog.author_name }}{% endif %}{% if blog.author_title %}{% if blog.author_name %} · {% endif %}{{ blog.author_title }}{% endif %}</p>{% endif %}
+      </header>
+      {% if cover %}<figure class="public-post-cover"><img src="{{ cover }}" alt="{{ blog.cover_image_alt|default:blog.title }}">{% if blog.cover_image_caption %}<figcaption>{{ blog.cover_image_caption }}</figcaption>{% endif %}</figure>{% endif %}
+      <div class="public-post-content">
+        {{ content|safe }}
+        {% for section in sections %}
+          {{ section.html|safe }}
+          {% if section.image %}<figure><img src="{{ section.image }}" alt="{{ section.alt }}">{% if section.caption %}<figcaption>{{ section.caption }}</figcaption>{% endif %}</figure>{% endif %}
+        {% endfor %}
+      </div>
+      {% if blog.image_credits %}<p class="public-post-credits">Image credits: {{ blog.image_credits }}</p>{% endif %}
+      {% include 'portal/author_bio.html' %}
+    </article>
+    <section class="public-post-cta"><span class="eyebrow">WRITEPOST</span><h2>Make room for your next idea.</h2><p>Plan, write and manage posts for every client in one workspace.</p><a class="button primary" href="{% url 'register' %}">Get started ↗</a></section>
+  </main>
+  <footer class="wrap site-footer"><div><a class="brand" href="{% url 'home' %}">{% include 'portal/brand_logo.html' %}</a><p>Your business. Your voice. Your own website.</p></div><nav aria-label="Footer"><a href="{% url 'home' %}#features">Features</a><a href="{% url 'public_blog' %}" aria-current="page">Blog</a><a href="{% url 'admin_docs' %}">API &amp; Docs</a><a href="{% url 'login' %}">Log in</a><a href="{% url 'register' %}">Get started ↗</a></nav><div class="footer-bottom"><span>© {% now 'Y' %} WritePost</span><span>Built for posts that go places.</span></div></footer>
+  <script defer src="{% static 'portal/landing.js' %}?v={% asset_version 'portal/landing.js' %}"></script>
+</body>
+</html>
