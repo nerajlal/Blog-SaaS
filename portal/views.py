@@ -2271,24 +2271,78 @@ def workspace_add_staff(request, pk):
 
     email = request.POST.get("email", "").strip().lower()
     validate_email(email)
-    staff = User.objects.filter(
-        email__iexact=email, is_active=True, is_superuser=False
-    ).first()
-    if not staff:
-        messages.error(
-            request,
-            "Ask this staff member to register with that email first, then add them here.",
+    staff = User.objects.filter(email__iexact=email).first()
+    if staff and not staff.is_active:
+        raise ValidationError(
+            "This email belongs to an inactive account. Reactivate it before granting access."
         )
-        return redirect("projects")
+    if staff and staff.is_superuser:
+        raise ValidationError("Platform administrators cannot be added as workspace staff.")
+    invited = staff is None
     with transaction.atomic():
+        if invited:
+            # The invitation email is the first proof of control of this address.
+            # A random password lets the recipient use the normal password-reset
+            # flow to choose their own credential without exposing one here.
+            staff = User.objects.create_user(
+                username=email,
+                email=email,
+                password=secrets.token_urlsafe(48),
+                is_active=True,
+            )
         for workspace_id in selected_ids:
             Membership.objects.get_or_create(
                 workspace_id=workspace_id, user=staff, defaults={"role": "editor"}
             )
-    messages.success(
-        request,
-        "Staff access saved for the selected workspaces. They can select them in their sidebar.",
-    )
+    if invited:
+        from django.contrib.auth.tokens import default_token_generator
+        from django.core.mail import send_mail
+        from django.template.loader import render_to_string
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
+        uid = urlsafe_base64_encode(force_bytes(staff.pk))
+        token = default_token_generator.make_token(staff)
+        setup_path = reverse(
+            "password_reset_confirm", kwargs={"uidb64": uid, "token": token}
+        )
+        setup_url = request.build_absolute_uri(setup_path)
+        workspace_names = list(
+            Workspace.objects.filter(pk__in=selected_ids)
+            .order_by("name")
+            .values_list("name", flat=True)
+        )
+        try:
+            send_mail(
+                subject="You have been invited to WritePost",
+                message=render_to_string(
+                    "portal/staff_invitation.txt",
+                    {
+                        "setup_url": setup_url,
+                        "inviter": request.user.get_full_name()
+                        or request.user.email,
+                        "workspaces": workspace_names,
+                    },
+                ),
+                from_email=None,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception:
+            messages.warning(
+                request,
+                "The account and workspace access were created, but the invitation email could not be sent. Configure email delivery; the staff member can use Forgot password to set their password.",
+            )
+        else:
+            messages.success(
+                request,
+                "Account created and access granted. A secure password setup link was sent to the new staff member.",
+            )
+    else:
+        messages.success(
+            request,
+            "Staff access saved for the selected workspaces. They can select them in their sidebar.",
+        )
     return redirect("projects")
 
 

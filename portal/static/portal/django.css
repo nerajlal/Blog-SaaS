@@ -315,3 +315,10 @@ button.sidebar-settings-gear{border:0;background:transparent;border-radius:8px}b
 .ai-highlight-button{background:linear-gradient(115deg,#2b4eff,#5746e8)!important;border-color:#2b4eff!important}
 
 .auth-card-inner>.auth-header{display:block;width:100%;margin:0 0 22px;gap:0}.auth-card-inner>.auth-header .auth-title{overflow-wrap:normal}.auth-card-inner>.auth-footer{width:100%}.auth-page{background:radial-gradient(ellipse at 18% 25%,#e9edff 0,transparent 48%),radial-gradient(ellipse at 80% 80%,#f0efff 0,transparent 45%),#f9fbfc}.auth-illustration{background:linear-gradient(125deg,#eef1ff,#f4f5ff)}.ai-highlight-button{background:#2b4eff!important}
+
+#workspace-staff-modal[open]{display:flex;flex-direction:column;overflow:hidden;max-height:88dvh;padding:0}
+#workspace-staff-modal .staff-modal-header{position:relative;z-index:3;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;background:#fff;border-bottom:1px solid #e4ebf0}
+#workspace-staff-modal .staff-modal-header h2{font-size:19px;margin:0;padding:0}
+#workspace-staff-modal .staff-modal-header .button{flex-shrink:0}
+#workspace-staff-modal .workspace-staff-content{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:20px 24px 24px}
+@media(max-width:480px){#workspace-staff-modal .staff-modal-header{padding:16px}#workspace-staff-modal .workspace-staff-content{padding:16px}}

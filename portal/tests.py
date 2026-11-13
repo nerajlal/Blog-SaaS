@@ -6,6 +6,7 @@ from datetime import timedelta
 from unittest.mock import patch, Mock
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.db import connection
@@ -78,7 +79,14 @@ class PortalTests(TestCase):
         )
         self.client.force_login(self.owner)
         self.client.post(url, {"email": "unregistered@example.com"})
-        self.assertFalse(User.objects.filter(email="unregistered@example.com").exists())
+        invited = User.objects.get(email="unregistered@example.com")
+        self.assertTrue(
+            Membership.objects.filter(
+                workspace=self.ws, user=invited, role="editor"
+            ).exists()
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("/reset-password/", mail.outbox[0].body)
 
     def test_staff_multi_workspace_selection_rejects_unmanaged_workspaces(self):
         staff = User.objects.create_user(

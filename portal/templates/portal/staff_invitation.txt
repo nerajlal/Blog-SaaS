@@ -1,0 +1,8 @@
+{{ inviter }} invited you to join their WritePost workspace{% if workspaces|length != 1 %}s{% endif %}:
+{% for workspace in workspaces %}- {{ workspace }}
+{% endfor %}
+
+Set a password for your account using this secure link:
+{{ setup_url }}
+
+If you were not expecting this invitation, you can ignore this email.
