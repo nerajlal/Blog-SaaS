@@ -260,6 +260,9 @@ def public_blog_post(request, slug):
             "content": clean_html(blog.content),
             "sections": sections,
             "cover": cover,
+            "author_avatar": image_url(
+                blog.author_avatar, blog.project.seo_settings
+            ),
             "canonical": canonical,
             "seo_title": seo["title"],
             "description": seo["description"],

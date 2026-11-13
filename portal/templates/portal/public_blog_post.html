@@ -43,27 +43,37 @@
   </header>
   <main id="main" class="wrap public-post-main">
     <a class="public-post-back" href="{% url 'public_blog' %}">← All posts</a>
-    <article class="public-post">
-      <header class="public-post-header">
-        <div class="public-post-meta">
-          {% if blog.category %}<span>{{ blog.category.name }}</span>{% endif %}
-          {% if blog.published_at %}<time datetime="{{ blog.published_at|date:'c' }}">{{ blog.published_at|date:'M j, Y' }}</time>{% endif %}
+    <div class="public-post-layout">
+      <article class="public-post">
+        <header class="public-post-header">
+          <div class="public-post-meta">
+            {% if blog.category %}<span>{{ blog.category.name }}</span>{% endif %}
+            {% if blog.published_at %}<time datetime="{{ blog.published_at|date:'c' }}">{{ blog.published_at|date:'M j, Y' }}</time>{% endif %}
+          </div>
+          <h1>{{ blog.title }}</h1>
+          {% if blog.excerpt %}<p class="public-post-excerpt">{{ blog.excerpt }}</p>{% endif %}
+        </header>
+        {% if cover %}<figure class="public-post-cover"><img src="{{ cover }}" alt="{{ blog.cover_image_alt|default:blog.title }}">{% if blog.cover_image_caption %}<figcaption>{{ blog.cover_image_caption }}</figcaption>{% endif %}</figure>{% endif %}
+        <div class="public-post-content">
+          {{ content|safe }}
+          {% for section in sections %}
+            {{ section.html|safe }}
+            {% if section.image %}<figure><img src="{{ section.image }}" alt="{{ section.alt }}">{% if section.caption %}<figcaption>{{ section.caption }}</figcaption>{% endif %}</figure>{% endif %}
+          {% endfor %}
         </div>
-        <h1>{{ blog.title }}</h1>
-        {% if blog.excerpt %}<p class="public-post-excerpt">{{ blog.excerpt }}</p>{% endif %}
-        {% if blog.author_name or blog.author_title %}<p class="public-post-byline">{% if blog.author_name %}{{ blog.author_name }}{% endif %}{% if blog.author_title %}{% if blog.author_name %} · {% endif %}{{ blog.author_title }}{% endif %}</p>{% endif %}
-      </header>
-      {% if cover %}<figure class="public-post-cover"><img src="{{ cover }}" alt="{{ blog.cover_image_alt|default:blog.title }}">{% if blog.cover_image_caption %}<figcaption>{{ blog.cover_image_caption }}</figcaption>{% endif %}</figure>{% endif %}
-      <div class="public-post-content">
-        {{ content|safe }}
-        {% for section in sections %}
-          {{ section.html|safe }}
-          {% if section.image %}<figure><img src="{{ section.image }}" alt="{{ section.alt }}">{% if section.caption %}<figcaption>{{ section.caption }}</figcaption>{% endif %}</figure>{% endif %}
-        {% endfor %}
-      </div>
-      {% if blog.image_credits %}<p class="public-post-credits">Image credits: {{ blog.image_credits }}</p>{% endif %}
-      {% include 'portal/author_bio.html' %}
-    </article>
+        {% if blog.image_credits %}<p class="public-post-credits">Image credits: {{ blog.image_credits }}</p>{% endif %}
+      </article>
+      <aside class="public-post-sidebar" aria-label="About the author">
+        <section class="public-post-author">
+          <span class="public-post-author-label">ABOUT THE AUTHOR</span>
+          {% if author_avatar %}<img class="public-post-author-avatar" src="{{ author_avatar }}" alt="{{ blog.author_name|default:'Post author' }}" width="76" height="76">{% else %}<span class="public-post-author-avatar public-post-author-initial" aria-hidden="true">{{ blog.author_name|default:'W'|first|upper }}</span>{% endif %}
+          <h2>{{ blog.author_name|default:'WritePost team' }}</h2>
+          {% if blog.author_title %}<p class="public-post-author-title">{{ blog.author_title }}</p>{% endif %}
+          {% if blog.author_bio %}<p class="public-post-author-bio">{{ blog.author_bio|linebreaksbr }}</p>{% else %}<p class="public-post-author-bio">More about the people behind this post.</p>{% endif %}
+          {% if blog.author_social_links %}<nav class="public-post-author-links" aria-label="Author social profiles">{% for platform,url in blog.author_social_links.items %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer me">{{ platform|title }} ↗</a>{% endfor %}</nav>{% endif %}
+        </section>
+      </aside>
+    </div>
     <section class="public-post-cta"><span class="eyebrow">WRITEPOST</span><h2>Make room for your next idea.</h2><p>Plan, write and manage posts for every client in one workspace.</p><a class="button primary" href="{% url 'register' %}">Get started ↗</a></section>
   </main>
   <footer class="wrap site-footer"><div><a class="brand" href="{% url 'home' %}">{% include 'portal/brand_logo.html' %}</a><p>Your business. Your voice. Your own website.</p></div><nav aria-label="Footer"><a href="{% url 'home' %}#features">Features</a><a href="{% url 'public_blog' %}" aria-current="page">Blog</a><a href="{% url 'admin_docs' %}">API &amp; Docs</a><a href="{% url 'login' %}">Log in</a><a href="{% url 'register' %}">Get started ↗</a></nav><div class="footer-bottom"><span>© {% now 'Y' %} WritePost</span><span>Built for posts that go places.</span></div></footer>
