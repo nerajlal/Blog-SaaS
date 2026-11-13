@@ -45,6 +45,7 @@ urlpatterns = [
         name="hosted_sitemap",
     ),
     path("", v.home, name="home"),
+    path("blog", v.public_blog, name="public_blog"),
     path(
         "admin/projects/<int:pk>/search/tools/<str:tab>",
         google_tools.hub,

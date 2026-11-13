@@ -147,6 +147,7 @@ GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "")
 GOOGLE_AUTH_REDIRECT_URI = os.getenv("GOOGLE_AUTH_REDIRECT_URI", "")
 
 PUBLIC_URL = os.getenv("DJANGO_PUBLIC_URL", "http://127.0.0.1:8000")
+WRITEPOST_BLOG_API_KEY = os.getenv("WRITEPOST_BLOG_API_KEY", "").strip()
 
 TRUST_PROXY = os.getenv("DJANGO_TRUST_PROXY", "false").lower() == "true"
 if TRUST_PROXY:

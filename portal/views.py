@@ -20,6 +20,7 @@ from django.http import HttpResponse, JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import strip_tags
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_http_methods, require_GET
 from . import ai
@@ -145,10 +146,67 @@ def admin_docs(request):
     return render(request, "portal/admin_docs.html")
 
 
+def writepost_blog_project():
+    blog_api_key = getattr(settings, "WRITEPOST_BLOG_API_KEY", "")
+    if not blog_api_key:
+        return None
+    return Project.objects.filter(api_key=blog_api_key).first()
+
+
+def writepost_blog_card(blog):
+    section_text = " ".join(section.text_content for section in blog.sections.all())
+    summary = strip_tags(blog.excerpt or blog.content or section_text)
+    return {
+        "title": blog.title,
+        "url": article_url(blog),
+        "excerpt": " ".join(summary.split()),
+        "image": image_url(blog.cover_image, blog.project.seo_settings),
+        "image_alt": blog.cover_image_alt or blog.title,
+        "category": blog.category.name if blog.category else "",
+        "published_at": blog.published_at or blog.created_at,
+    }
+
+
 def home(request):
     if request.user.is_authenticated and request.path == "/":
         return redirect("superadmin" if request.user.is_superuser else "projects")
-    return render(request, "portal/landing.html")
+    featured_posts = []
+    blog_project = writepost_blog_project()
+    if blog_project:
+        blogs = (
+            blog_project.blogs.live()
+            .select_related("category")
+            .prefetch_related("sections")
+            .order_by("-published_at", "-id")[:3]
+        )
+        featured_posts = [
+            card for card in (writepost_blog_card(blog) for blog in blogs) if card["url"]
+        ]
+    return render(
+        request,
+        "portal/landing.html",
+        {"featured_posts": featured_posts},
+    )
+
+
+def public_blog(request):
+    blog_project = writepost_blog_project()
+    page = None
+    posts = []
+    if blog_project:
+        queryset = (
+            blog_project.blogs.live()
+            .select_related("category")
+            .prefetch_related("sections")
+            .order_by("-published_at", "-id")
+        )
+        page = Paginator(queryset, 12).get_page(request.GET.get("page"))
+        posts = [writepost_blog_card(blog) for blog in page.object_list]
+    return render(
+        request,
+        "portal/public_blog.html",
+        {"posts": posts, "page": page},
+    )
 
 
 def sign_in(request):

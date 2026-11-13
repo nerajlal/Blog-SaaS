@@ -1,0 +1,72 @@
+{% load static portal_tags %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WritePost Blog — Ideas for your next post</title>
+  <meta name="description" content="Practical notes from WritePost on content, publishing, and building a better blog.">
+  <meta name="theme-color" content="#2B4EFF">
+  <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'public_blog' %}">
+  <link rel="icon" href="{% static 'portal/favicon.svg' %}?v={% asset_version 'portal/favicon.svg' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;650;700;750;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'portal/landing.css' %}?v={% asset_version 'portal/landing.css' %}">
+  <script defer src="{% static 'portal/landing.js' %}?v={% asset_version 'portal/landing.js' %}"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="brand" href="{% url 'home' %}" aria-label="WritePost home">{% include 'portal/brand_logo.html' %}</a>
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <a href="{% url 'home' %}#features">Features</a><a href="{% url 'home' %}#ai">AI writing</a>
+      <a href="{% url 'home' %}#how-it-works">How it works</a><a href="{% url 'home' %}#developers">API</a>
+      <a href="{% url 'public_blog' %}" aria-current="page">Blog</a><a href="{% url 'home' %}#faq">FAQs</a>
+    </nav>
+    <div class="header-actions"><a href="{% url 'login' %}">Log in</a><a class="button primary compact" href="{% url 'register' %}">Get started <span aria-hidden="true">↗</span></a></div>
+    <button class="menu-toggle" type="button" aria-label="Open navigation" aria-controls="mobile-menu" aria-expanded="false">☰</button>
+    <nav id="mobile-menu" hidden aria-label="Mobile navigation">
+      <a href="{% url 'home' %}#features">Features</a><a href="{% url 'home' %}#ai">AI writing</a>
+      <a href="{% url 'home' %}#how-it-works">How it works</a><a href="{% url 'home' %}#developers">API</a>
+      <a href="{% url 'public_blog' %}" aria-current="page">Blog</a><a href="{% url 'home' %}#faq">FAQs</a>
+      <a href="{% url 'login' %}">Log in</a><a href="{% url 'register' %}">Get started ↗</a>
+    </nav>
+  </header>
+  <main id="main" class="wrap public-blog-main">
+    <section class="public-blog-intro">
+      <span class="eyebrow">THE WRITEPOST BLOG</span>
+      <h1>Ideas for your next post.</h1>
+      <p>Practical notes from our team on content, publishing, and building a better blog.</p>
+    </section>
+    {% if posts %}
+      <div class="writepost-blog-grid public-blog-grid">
+        {% for post in posts %}
+          <article class="writepost-blog-card">
+            {% if post.url %}<a class="writepost-blog-image" href="{{ post.url }}" aria-label="Read {{ post.title }}">{% else %}<div class="writepost-blog-image" aria-hidden="true">{% endif %}
+              {% if post.image %}<img src="{{ post.image }}" alt="{{ post.image_alt }}" loading="lazy">{% else %}<span aria-hidden="true">W</span>{% endif %}
+            {% if post.url %}</a>{% else %}</div>{% endif %}
+            <div class="writepost-blog-card-copy">
+              <div class="writepost-blog-meta">{% if post.category %}<span>{{ post.category }}</span>{% endif %}<time datetime="{{ post.published_at|date:'c' }}">{{ post.published_at|date:'M j, Y' }}</time></div>
+              <h2>{% if post.url %}<a href="{{ post.url }}">{{ post.title }}</a>{% else %}{{ post.title }}{% endif %}</h2>
+              {% if post.excerpt %}<p>{{ post.excerpt|truncatechars:220 }}</p>{% endif %}
+              {% if post.url %}<a class="writepost-blog-read" href="{{ post.url }}">Read post <span aria-hidden="true">↗</span></a>{% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+      {% if page and page.paginator.num_pages > 1 %}
+        <nav class="public-blog-pagination" aria-label="Blog pages">
+          {% if page.has_previous %}<a class="button light" href="?page={{ page.previous_page_number }}">← Newer posts</a>{% else %}<span></span>{% endif %}
+          <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+          {% if page.has_next %}<a class="button light" href="?page={{ page.next_page_number }}">Older posts →</a>{% endif %}
+        </nav>
+      {% endif %}
+    {% else %}
+      <section class="public-blog-empty"><h2>New posts are on the way.</h2><p>Check back soon for practical ideas from the WritePost team.</p></section>
+    {% endif %}
+    <section class="public-blog-cta"><h2>Ready to make your next post?</h2><p>Bring every client publication into one workspace.</p><a class="button primary" href="{% url 'register' %}">Get started ↗</a></section>
+  </main>
+  <footer class="wrap site-footer"><div><a class="brand" href="{% url 'home' %}">{% include 'portal/brand_logo.html' %}</a><p>Your business. Your voice. Your own website.</p></div><nav aria-label="Footer"><a href="{% url 'home' %}#features">Features</a><a href="{% url 'public_blog' %}" aria-current="page">Blog</a><a href="{% url 'admin_docs' %}">API &amp; Docs</a><a href="{% url 'login' %}">Log in</a><a href="{% url 'register' %}">Get started ↗</a></nav><div class="footer-bottom"><span>© {% now 'Y' %} WritePost</span><span>Built for posts that go places.</span></div></footer>
+</body>
+</html>
