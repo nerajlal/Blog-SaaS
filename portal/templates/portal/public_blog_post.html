@@ -71,7 +71,21 @@
             <div class="public-post-author-heading"><h2>{{ blog.author_name|default:'WritePost team' }}</h2>{% if blog.author_title %}<p class="public-post-author-title">{{ blog.author_title }}</p>{% endif %}</div>
           </div>
           {% if blog.author_bio %}<p class="public-post-author-bio">{{ blog.author_bio|linebreaksbr }}</p>{% else %}<p class="public-post-author-bio">More about the people behind this post.</p>{% endif %}
-          {% if blog.author_social_links %}<nav class="public-post-author-links" aria-label="Author social profiles">{% for platform,url in blog.author_social_links.items %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer me">{{ platform|title }} ↗</a>{% endfor %}</nav>{% endif %}
+          {% if blog.author_social_links %}
+            <nav class="public-post-author-links" aria-label="Author social profiles">
+              {% for platform,url in blog.author_social_links.items %}
+                <a class="author-social-icon author-social-{{ platform }}" href="{{ url }}" target="_blank" rel="noopener noreferrer me" aria-label="{{ platform|title }} profile" title="{{ platform|title }}">
+                  {% if platform == 'linkedin' %}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.4 8.4H2.1V22h3.3V8.4ZM3.7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM22 13.6c0-4.1-4.4-5.1-6.3-2.6V8.4h-3.3V22h3.3v-7.3c0-2.6 3-2.8 3 0V22H22v-8.4Z"/></svg>
+                  {% elif platform == 'website' %}<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+                  {% elif platform == 'facebook' %}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.2 22v-9h3l.5-3.5h-3.5V7.2c0-1 .3-1.7 1.7-1.7H18V2.3c-.4-.1-1.6-.3-2.9-.3-2.8 0-4.8 1.7-4.8 4.9v2.6H7V13h3.3v9h3.9Z"/></svg>
+                  {% elif platform == 'instagram' %}<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" class="instagram-dot"/></svg>
+                  {% elif platform == 'x' %}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.6 5.6 22H2.4l7.3-8.4L1.8 2h6.5l4.5 6.9L18.9 2Zm-1.1 18h1.7L7.2 3.9H5.4L17.8 20Z"/></svg>
+                  {% elif platform == 'youtube' %}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8ZM9.7 15.1V8.9l5.5 3.1-5.5 3.1Z"/></svg>
+                  {% else %}<span aria-hidden="true">↗</span>{% endif %}
+                </a>
+              {% endfor %}
+            </nav>
+          {% endif %}
         </section>
       </aside>
     </div>

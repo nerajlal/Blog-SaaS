@@ -13,8 +13,13 @@
 .public-post-author h2{margin:0 0 4px;font-size:20px;letter-spacing:-.035em;overflow-wrap:anywhere}
 .public-post-author-title{margin:0;color:#6f7b89;font-size:13px}
 .public-post-author-bio{margin:15px 0 0;font-size:13px;line-height:1.7}
-.public-post-author-links{display:grid;gap:9px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
-.public-post-author-links a{color:var(--blue);font-size:12px;font-weight:550}
+.public-post-author-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.author-social-icon{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:50%;background:#fff;color:#5f6c7b;transition:background .18s,color .18s,transform .18s}
+.author-social-icon:hover{transform:translateY(-2px);background:#edf2ff;color:var(--blue)}
+.author-social-icon svg{display:block;width:19px;height:19px;fill:currentColor}
+.author-social-website svg,.author-social-instagram svg{fill:none;stroke:currentColor;stroke-width:1.8}
+.author-social-instagram .instagram-dot{fill:currentColor;stroke:none}
+.author-social-linkedin{color:#0a66c2}.author-social-facebook{color:#1877f2}.author-social-x{color:#171717}.author-social-youtube{color:#e62117}
 .public-post-header{padding:25px 0 18px}
 .public-post-meta{display:flex;align-items:center;gap:14px;color:#858e99;font-size:12px}
 .public-post-meta span{color:var(--blue);font-weight:600}
