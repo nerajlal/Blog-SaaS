@@ -1,7 +1,7 @@
 # External SEO product research: Rank Math and Yoast
 
 **Reviewed:** 5 November 2026 (Asia/Kolkata).  
-**Purpose:** Document competitor capabilities and identify future TryWryter features.
+**Purpose:** Document competitor capabilities and identify future WritePost features.
 **Status:** Research baseline plus implementation tracking. Phases 1–2 are implemented as described below; the remaining backlog is proposed, and no purchase is approved.
 
 ## 1. Scope and reading guide
@@ -16,7 +16,7 @@ Labels used below:
 - **Paid:** Explicitly described as Premium/PRO or a paid offering.
 - **Separate/conditional:** Requires another subscription, integration, allowance, or product.
 - **Verify:** Official pages conflict, omit the exact entitlement, or present an ambiguous comparison.
-- **Proposal:** Our suggested adaptation for TryWryter, not a statement about a competitor.
+- **Proposal:** Our suggested adaptation for WritePost, not a statement about a competitor.
 
 Availability, language support, quotas, and pricing can change. Recheck the linked feature page and checkout before buying or promising parity.
 
@@ -146,7 +146,7 @@ Sources: [Content AI](https://rankmath.com/content-ai/), [AI Link Genius](https:
 
 ### 3.8 Specialist and operational capabilities
 
-The suite advertises WooCommerce/EDD, multi-location local SEO, podcast support, bulk SEO editing/import-export, reporting, and builder integrations. Some are paid or require corresponding WordPress products. These are extension areas rather than necessary features for TryWryter's first SEO release. Client-site licensing and reporting are not permission to resell the plugin as our own service. [Pricing feature catalog](https://rankmath.com/pricing/)
+The suite advertises WooCommerce/EDD, multi-location local SEO, podcast support, bulk SEO editing/import-export, reporting, and builder integrations. Some are paid or require corresponding WordPress products. These are extension areas rather than necessary features for WritePost's first SEO release. Client-site licensing and reporting are not permission to resell the plugin as our own service. [Pricing feature catalog](https://rankmath.com/pricing/)
 
 ## 4. Yoast feature inventory
 
@@ -219,7 +219,7 @@ Sources: [AI Generate](https://yoast.com/features/ai-features/ai-generate/), [cu
 
 **Entitlement caution:** A timeline entry is evidence that a capability exists, not proof that every Premium customer receives the full AI+ monitoring allowance. Premium, AI+, WooCommerce, and integration quotas must be checked separately.
 
-## 5. Marketing claims we should not copy into TryWryter
+## 5. Marketing claims we should not copy into WritePost
 
 | Claim or ambiguity | What to document instead |
 | --- | --- |
@@ -234,7 +234,7 @@ Sources: [AI Generate](https://yoast.com/features/ai-features/ai-generate/), [cu
 
 Sources for search-engine constraints: [Google documentation updates](https://developers.google.com/search/updates), [robots.txt guidance](https://developers.google.com/search/docs/crawling-indexing/robots/intro), [Indexing API eligibility](https://developers.google.com/search/apis/indexing-api/v3/using-api). Scoring, sampling, and product wording recommendations are our own interpretation.
 
-## 6. What this means for the current TryWryter project
+## 6. What this means for the current WritePost project
 
 ### 6.1 Existing foundation versus missing SEO features
 
@@ -257,7 +257,7 @@ Relevant code: `app/Models/Blog.php`, `app/Models/BlogSection.php`, `app/Models/
 
 The following is a **proposed design**, informed by the repository and Yoast's documented headless approach. [Yoast REST API example](https://developer.yoast.com/customization/apis/rest-api/)
 
-| Responsibility | TryWryter backend | Customer's public website |
+| Responsibility | WritePost backend | Customer's public website |
 | --- | --- | --- |
 | Metadata | Store overrides/defaults; resolve a safe SEO JSON object. | Render title, meta tags, canonical, Open Graph, and X cards in crawlable HTML. |
 | Structured data | Generate validated JSON-LD from approved fields. | Serialize safely into the actual public article page. |
@@ -274,7 +274,7 @@ A sitemap must list the **public article URLs**, not API endpoints, admin edit l
 
 ## 7. Proposed implementation backlog
 
-Everything below is a proposal for a later task. Priority reflects TryWryter usefulness and dependencies, not a claim of competitor parity.
+Everything below is a proposal for a later task. Priority reflects WritePost usefulness and dependencies, not a claim of competitor parity.
 
 ### Phase 1 — SEO essentials and consumer contract
 
@@ -419,7 +419,7 @@ Acceptance criteria for the later implementation:
 - This is public-document research. UI behavior, feature quality, and commercial allowances have not been independently tested in paid accounts.
 - Exact per-setting Free/PRO entitlements are left conditional where source text loses comparison checkmarks or conflicts with another official page.
 - Rank Math promotion cards conflict with portions of their FAQ. Yoast timeline, dedicated feature pages, and current publisher listing also differ on a few entitlements. Do not resolve these by guessing.
-- Prices above are dated snapshots, not a purchase recommendation or a proposed TryWryter price list.
+- Prices above are dated snapshots, not a purchase recommendation or a proposed WritePost price list.
 - Recheck pricing, licensing, AI quotas, API permissions, supported languages, and current search-engine policies before implementation.
 - Build original workflows and code suited to Laravel/headless delivery. Feature research does not authorize copying vendor branding, proprietary implementation, or making unsupported SEO promises.
 
@@ -429,15 +429,15 @@ Implemented in the repository: project SEO defaults, owner/admin settings permis
 
 The local XAMPP schema has been migrated. Real customer DNS verification and frontend integration are still required per publication. Phase 2 now includes versioned, separate SEO/readability scores; exact keyphrase, metadata, structure, image, and duplicate checks; live draft feedback; saved revision reports; cornerstone/freshness tracking; content-health filters; and audited warning decisions. English-only writing heuristics are explicit; other languages retain structural checks. See [editorial assistant documentation](editorial-analysis.md). Phase 3 now adds project-scoped link inventories and possible-orphan reports, deterministic suggestions with approved appended links/guarded undo, queued safe HEAD checks, exact-path redirect management, CSV redirect/metadata previews with audit/undo, and authenticated 404 telemetry with retention. Consumer integration, verified domains, supervised SEO queue workers and the scheduler are required. No automatic redirects are created for story deletion/moves. See [link and URL operations](links-and-redirects.md). Phase 4 now includes read-only Search Console OAuth with encrypted tokens, property-scoped performance snapshots/CSV and indexed-version inspections. Google client configuration and live account consent are still required and untested. IndexNow, GA4, scheduled digests, independent rank tracking and AI remain unimplemented. See [Search Console setup](search-console.md).
 
-## 11. Feature comparison — TryWryter vs Rank Math vs Yoast
+## 11. Feature comparison — WritePost vs Rank Math vs Yoast
 
-Each row compares the same feature across exactly three product columns. The feature name appears in the TryWryter cell to keep the table to three columns.
+Each row compares the same feature across exactly three product columns. The feature name appears in the WritePost cell to keep the table to three columns.
 
-**Status key:** **Available** = implemented in our repository or documented by the vendor; **Partial** = a limited implementation; **Not built** = absent from TryWryter; **WordPress** = supplied by the host platform rather than the SEO plugin; **Conditional** = plan, add-on, integration, or entitlement must be checked. Phase references point to the roadmap in section 7; implementation status is stated explicitly per feature.
+**Status key:** **Available** = implemented in our repository or documented by the vendor; **Partial** = a limited implementation; **Not built** = absent from WritePost; **WordPress** = supplied by the host platform rather than the SEO plugin; **Conditional** = plan, add-on, integration, or entitlement must be checked. Phase references point to the roadmap in section 7; implementation status is stated explicitly per feature.
 
 Competitor entries summarize the dated research and linked sources in sections 2–5. They describe the product families, not a promise that every feature is included in the free plugin or a single subscription.
 
-| Ours — TryWryter | Theirs — Rank Math | Theirs — Yoast |
+| Ours — WritePost | Theirs — Rank Math | Theirs — Yoast |
 | --- | --- | --- |
 | **Platform:** Available — standalone Laravel headless CMS. | WordPress SEO plugin and connected services. | WordPress SEO plugin; separate platform products also exist. |
 | **Writing, drafts, categories, scheduling:** Available — built into our CMS. | WordPress supplies the publishing workflow. | WordPress supplies the publishing workflow. |

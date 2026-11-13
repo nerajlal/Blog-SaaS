@@ -17,3 +17,6 @@ Requests use no-store so unpublished/deleted posts are not kept in a content cac
 Add your own theme, error UI, stylesheet for rich-text sizes, and deployment checks.
 This is starter source, not an installed plugin or an automatic deploy integration.
 Official data fetching guidance: https://react.dev/reference/react/useEffect
+
+The preferred environment variables are `WRITEPOST_URL` and `WRITEPOST_API_KEY`.
+Legacy `TRYWRYTER_URL` and `TRYWRYTER_API_KEY` are accepted as fallbacks.

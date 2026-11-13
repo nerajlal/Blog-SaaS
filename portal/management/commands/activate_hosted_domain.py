@@ -18,10 +18,16 @@ class Command(BaseCommand):
             raise CommandError("Enable hosting and verify DNS ownership first.")
         try:
             response = requests.get(
-                "https://" + site.domain + "/.well-known/trywryter-hosted",
+                "https://" + site.domain + "/.well-known/writepost-hosted",
                 timeout=15,
                 allow_redirects=False,
             )
+            if response.status_code == 404:
+                response = requests.get(
+                    "https://" + site.domain + "/.well-known/trywryter-hosted",
+                    timeout=15,
+                    allow_redirects=False,
+                )
             if (
                 response.status_code != 200
                 or response.text.strip() != site.verification_token

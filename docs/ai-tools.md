@@ -29,9 +29,9 @@ php artisan optimize:clear
 
 Keep the existing `APP_KEY`. Rotating it would make encrypted profiles and suggestions unreadable unless a deliberate key migration is performed.
 
-Copy the optional settings from `.env.example` into server configuration. Set `AI_ENABLED=true`, provide `ANTHROPIC_API_KEY`, and choose an available model in `CLAUDE_MODEL`. The endpoint is fixed to Anthropic's native Messages API. `ANTHROPIC_API_VERSION` defaults to `2026-10-21`; confirm the chosen account/model supports that version before enabling. `ANTHROPIC_WORKSPACE_ID` is optional for a workspace-scoped Anthropic key, and needed when the key/account requires that header. This provider workspace is different from a TryWryter workspace.
+Copy the optional settings from `.env.example` into server configuration. Set `AI_ENABLED=true`, provide `ANTHROPIC_API_KEY`, and choose an available model in `CLAUDE_MODEL`. The endpoint is fixed to Anthropic's native Messages API. `ANTHROPIC_API_VERSION` defaults to `2026-10-21`; confirm the chosen account/model supports that version before enabling. `ANTHROPIC_WORKSPACE_ID` is optional for a workspace-scoped Anthropic key, and needed when the key/account requires that header. This provider workspace is different from a WritePost workspace.
 
-`AI_MONTHLY_REQUEST_LIMIT` sets the server ceiling for each TryWryter workspace (default 50). An owner/admin must also enable usage and choose an allowance in Project details; this applies to all projects in that workspace. Legacy projects have their own scope.
+`AI_MONTHLY_REQUEST_LIMIT` sets the server ceiling for each WritePost workspace (default 50). An owner/admin must also enable usage and choose an allowance in Project details; this applies to all projects in that workspace. Legacy projects have their own scope.
 
 Run one dedicated worker, under the same application user used for the other queue workers:
 

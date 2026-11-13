@@ -21,7 +21,7 @@ export default async function Post({params}) {
   return <article><Link href="/posts">← All posts</Link><h1>{post.title}</h1>
     <p>{post.author_name} {post.author_title}</p>
     {post.cover_image_url && <figure><img src={post.cover_image_url} alt={post.cover_image_alt || ''} style={{maxWidth:'100%'}}/><figcaption>{post.cover_image_caption}</figcaption></figure>}
-    {/* HTML is sanitized by the trusted TryWryter API. Do not use arbitrary sources. */}
+    {/* HTML is sanitized by the trusted WritePost API. Do not use arbitrary sources. */}
     <div dangerouslySetInnerHTML={{__html:post.content}}/>
     {post.sections.map(section => <section key={section.id}>
       {section.image_url && <figure><img src={section.image_url} alt={section.image_alt || ''} style={{maxWidth:'100%'}}/><figcaption>{section.image_caption}</figcaption></figure>}

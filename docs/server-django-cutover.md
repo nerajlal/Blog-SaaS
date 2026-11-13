@@ -149,7 +149,7 @@ The importer preserves users and supported password hashes, projects, stories, a
 ```bash
 cat > /etc/systemd/system/blogsaas-web.service <<'UNIT'
 [Unit]
-Description=TryWryter Django web
+Description=WritePost Django web
 After=network.target mysql.service
 
 [Service]
@@ -166,7 +166,7 @@ WantedBy=multi-user.target
 UNIT
 cat > /etc/systemd/system/blogsaas-worker.service <<'UNIT'
 [Unit]
-Description=TryWryter background worker
+Description=WritePost background worker
 After=network.target mysql.service
 
 [Service]

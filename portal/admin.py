@@ -6,7 +6,9 @@ admin.site.register(User, UserAdmin)
 for model in [Workspace, Membership, Project, Category, Blog]:
     admin.site.register(model)
 
-admin.site.site_header = "TryWryter platform administration"
+admin.site.site_header = "WritePost platform administration"
+admin.site.site_title = "WritePost administration"
+admin.site.index_title = "Platform overview"
 admin.site.index_template = "portal/superadmin_index.html"
 
 

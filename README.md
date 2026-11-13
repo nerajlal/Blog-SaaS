@@ -1,4 +1,4 @@
-# TryWryter — Django edition
+# WritePost — Django edition
 
 Branch **`python`** is the Django conversion of `ai-based`. The active Python application is `blogsaas/` + `portal/`, started with `manage.py`. The existing PHP files are retained as migration/reference material; they are not called by Django. `main` and `ai-based` remain separate.
 

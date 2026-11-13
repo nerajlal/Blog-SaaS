@@ -70,10 +70,10 @@ foreach ($data['blogs'] as $post) {
 return $html ?: '<p>No published posts yet.</p>';""".replace(
         "__BASE__", php_base
     ).replace("__KEY__", php_key)
-    shopify = """<div id="trywryter-posts" aria-live="polite">Loading posts…</div>
+    shopify = """<div id="writepost-posts" aria-live="polite">Loading posts…</div>
 <script>
 (async () => {
-  const root = document.getElementById('trywryter-posts');
+  const root = document.getElementById('writepost-posts');
   const API = __BASE__;
   const KEY = __KEY__;
   const query = new URLSearchParams(location.search);
@@ -107,7 +107,7 @@ return $html ?: '<p>No published posts yet.</p>';""".replace(
       const back = text('a', '← All posts', root); back.href = location.pathname;
       text('h2', post.title, root); text('p', post.author_name, root);
       image(post.cover_image_url, post.cover_image_alt, post.cover_image_caption, root);
-      // Only use HTML returned by your trusted TryWryter API, which sanitizes it.
+      // Only use HTML returned by your trusted WritePost API, which sanitizes it.
       const content = document.createElement('div'); content.innerHTML = post.content;
       root.append(content);
       for (const section of post.sections) {

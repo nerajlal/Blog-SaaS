@@ -50,18 +50,26 @@ def setup(request, pk):
             if operation == "verify":
                 if not site.domain:
                     raise ValidationError("Save a subdomain first.")
-                try:
-                    records = [
-                        "".join(part.decode() for part in rr.strings)
-                        for rr in dns.resolver.resolve(
-                            "_trywryter-verification." + site.domain, "TXT", lifetime=5
-                        )
-                    ]
-                except dns.exception.DNSException:
-                    records = []
-                if "trywryter=" + site.verification_token not in records:
+                verified = False
+                for prefix, expected in [
+                    ("_writepost-verification.", "writepost="),
+                    ("_trywryter-verification.", "trywryter="),
+                ]:
+                    try:
+                        records = [
+                            "".join(part.decode() for part in rr.strings)
+                            for rr in dns.resolver.resolve(
+                                prefix + site.domain, "TXT", lifetime=5
+                            )
+                        ]
+                    except dns.exception.DNSException:
+                        continue
+                    if expected + site.verification_token in records:
+                        verified = True
+                        break
+                if not verified:
                     raise ValidationError(
-                        "TXT record not found. Check DNS and try again after propagation."
+                        "TXT record not found. Wait for propagation and try again."
                     )
                 if not HostedSite.objects.filter(
                     pk=site.pk,

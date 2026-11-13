@@ -1,10 +1,10 @@
 :root {
-    --product-ink: #172329;
+    --product-ink: #101820;
     --product-muted: #69747b;
     --product-line: #e6eaed;
-    --product-blue: #2563eb;
+    --product-blue: #2b4eff;
     --product-green: #07976c;
-    --product-display: 'Plus Jakarta Sans',sans-serif;
+    --product-display: 'Inter',sans-serif;
     --product-body: 'Inter',sans-serif;
 }
 
@@ -35,7 +35,7 @@
     top: -100px;
     padding: 12px 18px;
     border-radius: 12px;
-    background: #172329;
+    background: #101820;
     color: #fff;
     z-index: 100;
 }
@@ -69,7 +69,7 @@
     height: 38px;
     border-radius: 50%;
     color: #fff;
-    background: #2563eb;
+    background: #2b4eff;
     font: bold 32px var(--product-display);
     letter-spacing: -4px;
     padding: 0 5px 5px 0;
@@ -132,9 +132,9 @@
 }
 
 .product-button-dark {
-    background: #172329;
+    background: #101820;
     color: #fff;
-    box-shadow: 0 4px 9px #1723290c;
+    box-shadow: 0 4px 9px #1018200c;
 }
 
 .product-button-dark:hover {
@@ -160,7 +160,7 @@
 }
 
 .auth-page a:focus-visible,.auth-page button:focus-visible,.workspace-app a:focus-visible,.workspace-app button:focus-visible,.workspace-app summary:focus-visible {
-    outline: 3px solid #2563eb;
+    outline: 3px solid #2b4eff;
     outline-offset: 4px;
 }
 
@@ -207,7 +207,7 @@
 .product-field input:focus {
     outline: none;
     border-color: #7dacec;
-    box-shadow: 0 0 0 3px #2563eb0d;
+    box-shadow: 0 0 0 3px #2b4eff0d;
 }
 
 .product-field input[aria-invalid=true] {
@@ -236,7 +236,7 @@
 
 .password-field button:hover {
     background: #f1f6f8;
-    color: #2563eb;
+    color: #2b4eff;
 }
 
 .product-checkbox {
@@ -249,7 +249,7 @@
 }
 
 .product-checkbox input {
-    accent-color: #2563eb;
+    accent-color: #2b4eff;
     width: 14px;
     height: 14px;
     border: 1px solid #d8e0e4;
@@ -630,7 +630,7 @@
 }
 
 .auth-form-options>a:hover,.auth-form-footer a:hover {
-    color: #2563eb;
+    color: #2b4eff;
 }
 
 .auth-submit {
@@ -780,7 +780,7 @@
 }
 
 .workspace-create>summary:hover {
-    color: #2563eb;
+    color: #2b4eff;
 }
 
 .workspace-create form {
@@ -798,7 +798,7 @@
 }
 
 .workspace-create button {
-    background: #172329;
+    background: #101820;
     color: #fff;
     border: 0;
     border-radius: 8px;
@@ -839,7 +839,7 @@
 }
 
 .workspace-nav-link.is-active {
-    color: #2563eb;
+    color: #2b4eff;
     background: #edf3ff;
     font-weight: 600;
 }
@@ -1153,7 +1153,7 @@
 .workspace-app :is(input,textarea,select):focus {
     outline: none;
     border-color: #8fb3e5;
-    box-shadow: 0 0 0 3px #2563eb0b;
+    box-shadow: 0 0 0 3px #2b4eff0b;
 }
 
 .workspace-app input::placeholder,.workspace-app textarea::placeholder {
@@ -1161,7 +1161,7 @@
 }
 
 .workspace-app input[type=checkbox],.workspace-app input[type=radio] {
-    accent-color: #2563eb;
+    accent-color: #2b4eff;
 }
 
 .workspace-app input[readonly] {
@@ -1194,7 +1194,7 @@
 }
 
 .workspace-app :is(button,a)[class*="bg-blue-600"],.workspace-app :is(button,a)[class*="bg-brand-600"],.workspace-app :is(button,a)[class*="bg-slate-900"],.workspace-app :is(button,a)[class*="from-brand-600"] {
-    background: #172329;
+    background: #101820;
     color: #fff;
     border-radius: 999px;
     box-shadow: none;
@@ -2360,8 +2360,8 @@
 .project-title-row a { color: inherit; text-decoration: none; }
 .project-trash-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 36px; height: 36px; border: 0; border-radius: 10px; background: #fff1f2; color: #b42338; cursor: pointer; }
 .project-trash-button:hover { background: #ffe0e5; }
-.project-delete-dialog { margin: auto; width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; border: 1px solid #e3ebef; border-radius: 20px; padding: 28px; background: white; color: #18282e; box-shadow: 0 24px 80px #18282e33; }
-.project-delete-dialog::backdrop { background: #18282e88; }
+.project-delete-dialog { margin: auto; width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; border: 1px solid #e3ebef; border-radius: 20px; padding: 28px; background: white; color: #101820; box-shadow: 0 24px 80px #10182033; }
+.project-delete-dialog::backdrop { background: #10182088; }
 .project-delete-dialog h2 { font-size: 23px; margin: 0 0 16px; }
 .project-delete-dialog p, .project-delete-dialog label { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 .project-delete-dialog label { display: block; margin: 18px 0 8px; }
@@ -2372,15 +2372,15 @@
 .project-card-actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
 .project-action { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; border-radius: 9px; padding: 8px 12px; font-size: 12px; font-weight: 600; line-height: 1.3; text-decoration: none; transition: background .15s, border-color .15s; }
 .project-action svg { flex-shrink: 0; }
-.project-action-primary { flex: 1; background: #edf3ff; border: 1px solid #dce6fb; color: #3458aa; }
+.project-action-primary { flex: 1; background: #edf3ff; border: 1px solid #dce6fb; color: #2b4eff; }
 .project-action-primary:hover { background: #e2ecff; border-color: #bdd0f6; }
 .project-action-secondary { flex: 1.25; background: transparent; border: 1px solid #e3ebef; color: #566771; }
 .project-action-secondary:hover { background: #f4f8fa; border-color: #cddde8; }
-.project-action:focus-visible { outline: 2px solid #3458aa; outline-offset: 3px; }
+.project-action:focus-visible { outline: 2px solid #2b4eff; outline-offset: 3px; }
 
 /* Project knowledge and AI writing tools share the product's quiet card language. */
 .project-details-link { display: inline-flex; justify-content: space-between; gap: 12px; color: #637582; font-size: 12px; text-decoration: none; margin-top: 14px; }
-.project-details-link:hover, .ai-social-link:hover { color: #3458aa; }
+.project-details-link:hover, .ai-social-link:hover { color: #2b4eff; }
 .ai-social-link { display: inline-block; color: #637582; font-size: 12px; margin-top: 8px; }
 .ai-page { max-width: 1120px; margin: 0 auto; display: grid; gap: 24px; }
 .ai-two-columns { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 24px; align-items: start; }
@@ -2412,7 +2412,7 @@
 .ai-panel summary { font-size: 13px; color: #466078; cursor: pointer; }
 .ai-approved p { white-space: pre-wrap; font-size: 12px; }
 .ai-approved h4 { margin-top: 14px; font-size: 12px; font-weight: 700; }
-.ai-copy { font-size: 12px; color: #3458aa; background: transparent; border: 0; cursor: pointer; justify-self: start; padding: 4px 0; }
+.ai-copy { font-size: 12px; color: #2b4eff; background: transparent; border: 0; cursor: pointer; justify-self: start; padding: 4px 0; }
 .ai-editor-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 0 auto 24px; max-width: 1100px; }
 .ai-editor-entry span { color: #71818b; font-size: 12px; }
 @media (max-width: 1000px) { .ai-two-columns { grid-template-columns: minmax(0, 1fr); } }

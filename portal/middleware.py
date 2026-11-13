@@ -75,7 +75,10 @@ class HostedDomainMiddleware:
             )
             if not site or not site.enabled or not site.verified_at:
                 return HttpResponse(status=404)
-            if request.path == "/.well-known/trywryter-hosted" and request.method in [
+            if request.path in [
+                "/.well-known/writepost-hosted",
+                "/.well-known/trywryter-hosted",
+            ] and request.method in [
                 "GET",
                 "HEAD",
             ]:

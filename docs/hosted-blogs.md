@@ -43,7 +43,7 @@ For each domain, replace `blog.example.com` below with the verified hostname.
 Add that exact hostname to `DJANGO_ALLOWED_HOSTS` in `.env.django`, preserving
 existing entries, and restart the web service.
 
-Create `/etc/nginx/sites-available/trywryter-blog-example`:
+Create `/etc/nginx/sites-available/writepost-blog-example`:
 
 ```nginx
 server {
@@ -61,7 +61,7 @@ server {
         add_header X-Content-Type-Options nosniff always;
     }
     location ~ /\. { deny all; }
-    location = /.well-known/trywryter-hosted {
+    location = /.well-known/writepost-hosted {
         proxy_pass http://127.0.0.1:8001;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -79,7 +79,7 @@ server {
 Enable the configuration, validate it, provision TLS, then activate:
 
 ```bash
-ln -s /etc/nginx/sites-available/trywryter-blog-example /etc/nginx/sites-enabled/trywryter-blog-example
+ln -s /etc/nginx/sites-available/writepost-blog-example /etc/nginx/sites-enabled/writepost-blog-example
 nginx -t && systemctl reload nginx
 certbot --nginx -d blog.example.com --redirect
 cd /var/www/Blog-SaaS
@@ -101,3 +101,5 @@ Remove obsolete nginx configurations/certificates and allowed-host entries when
 retiring a domain, so an abandoned DNS record cannot keep serving an old site.
 
 For setup assistance: trywryter@gmail.com.
+
+Existing `_trywryter-verification` TXT records and the legacy HTTPS challenge URL remain accepted after the WritePost rebrand. New setups use `_writepost-verification` and `writepost=`.

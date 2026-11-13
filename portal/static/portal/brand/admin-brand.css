@@ -1,0 +1,1 @@
+:root{--primary:#2b4eff;--secondary:#101820;--header-bg:#2b4eff;--header-link-color:#fff;--header-color:#fff;--font-family-primary:Inter,system-ui,sans-serif}body,input,textarea,select,button{font-family:Inter,system-ui,sans-serif}#header #site-name{margin:0}#header #site-name img{display:block;object-fit:contain}#header a:link,#header a:visited{color:#fff}

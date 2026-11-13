@@ -96,7 +96,7 @@ def enqueue(project, user, action, data, key, blog=None, platform=""):
     if action not in RESULT_FIELDS:
         raise ValidationError("Unknown AI action.")
     if not ready():
-        raise ValidationError("TryWryter AI is disabled or not configured.")
+        raise ValidationError("WritePost AI is disabled or not configured.")
     profile = approved(project)
     if action != "analyze" and not profile:
         raise ValidationError("Approve project details before generation.")
@@ -183,7 +183,7 @@ def enqueue(project, user, action, data, key, blog=None, platform=""):
 
 def validate_result(action, result, strict=False):
     if not isinstance(result, dict):
-        raise ValidationError("TryWryter AI response must be a JSON object.")
+        raise ValidationError("WritePost AI response must be a JSON object.")
     fields = RESULT_FIELDS[action]
     result = {
         key: result.get(
@@ -202,7 +202,7 @@ def validate_result(action, result, strict=False):
             }.get(key, 16000)
         ):
             raise ValidationError(
-                f"TryWryter AI returned an invalid or oversized {key} field."
+                f"WritePost AI returned an invalid or oversized {key} field."
             )
         if (
             key
@@ -213,14 +213,14 @@ def validate_result(action, result, strict=False):
             and not value.strip()
         ):
             raise ValidationError(
-                f"TryWryter AI response is missing the required {key} text."
+                f"WritePost AI response is missing the required {key} text."
             )
     return result
 
 
 def generate(run):
     if not ready():
-        raise ValidationError("TryWryter AI is not configured.")
+        raise ValidationError("WritePost AI is not configured.")
     data = run.input.copy()
     if run.action == "analyze" and data.get("urls"):
         data["sources"] = data.get("sources", []) + website_sources(data["urls"])
@@ -274,7 +274,7 @@ def generate(run):
     run.save(update_fields=["usage", "updated_at"])
     if obj.get("stop_reason") == "max_tokens":
         raise ValidationError(
-            "TryWryter AI reached the output limit before finishing. No complete draft was saved; try a shorter brief or outline."
+            "WritePost AI reached the output limit before finishing. No complete draft was saved; try a shorter brief or outline."
         )
     if obj.get("stop_reason") != "end_turn":
         raise ValidationError("Incomplete or refused AI response.")
@@ -298,13 +298,13 @@ def generate(run):
 def failure_detail(error):
     """Only controlled diagnostics: never expose response bodies, credentials or prompts."""
     if isinstance(error, requests.Timeout):
-        return "TryWryter AI timed out. Provider billing may have occurred. No automatic retry was made."
+        return "WritePost AI timed out. Provider billing may have occurred. No automatic retry was made."
     if isinstance(error, requests.ConnectionError):
-        return "Could not connect to TryWryter AI. Check network, DNS and TLS connectivity. No automatic retry was made."
+        return "Could not connect to WritePost AI. Check network, DNS and TLS connectivity. No automatic retry was made."
     if isinstance(error, requests.HTTPError):
         code = error.response.status_code if error.response is not None else 0
         reason = {
-            400: "TryWryter AI rejected the request parameters or workspace configuration",
+            400: "WritePost AI rejected the request parameters or workspace configuration",
             401: "AI service configuration needs attention; contact support",
             403: "AI access is unavailable for this workspace; contact support",
             404: "The selected AI model or API endpoint is unavailable",
@@ -313,7 +313,7 @@ def failure_detail(error):
         }.get(code, "AI service returned an upstream error")
         return f"{reason} (HTTP {code}). No automatic retry was made."
     if isinstance(error, json.JSONDecodeError):
-        return "TryWryter AI did not return valid JSON. No draft was saved. Review the brief and generate again when ready."
+        return "WritePost AI did not return valid JSON. No draft was saved. Review the brief and generate again when ready."
     if isinstance(error, ValidationError):
         return (" ".join(error.messages) + " No automatic retry was made.")[:500]
     return "AI processing failed unexpectedly. Check worker configuration and permissions. No automatic retry was made."

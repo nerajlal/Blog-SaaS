@@ -17,7 +17,7 @@ This describes the current Django application on the `main` branch. URLs below u
 
 | Control | Use |
 | --- | --- |
-| **TryWryter logo** | Return to the Projects overview. |
+| **WritePost logo** | Return to the Projects overview. |
 | **Workspace names** | Switch the active workspace. The chosen workspace is visually marked. Only workspaces the signed-in user belongs to are shown. |
 | **+ New workspace** | Create another workspace for a business, client, or team. The creator becomes its owner. |
 | **Project name above Blogs** | Identifies the project that the menus below apply to. It is a heading, not a separate menu link. |

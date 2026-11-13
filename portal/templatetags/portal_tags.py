@@ -24,8 +24,8 @@ def customer_ai_message(value):
     import re
 
     return re.sub(
-        r"\b(?:claude(?:-[a-z0-9]+)*|anthropic)\b",
-        "TryWryter AI",
+        r"\b(?:claude(?:-[a-z0-9]+)*|anthropic|trywryter(?:\s+ai)?)\b",
+        "WritePost AI",
         str(value or ""),
         flags=re.I,
     )

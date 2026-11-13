@@ -2381,11 +2381,11 @@ def integration_download(request, pk, platform):
             ):
                 archive.write(
                     source,
-                    "trywryter-" + platform + "/" + str(source.relative_to(root)),
+                    "writepost-" + platform + "/" + str(source.relative_to(root)),
                 )
     response = HttpResponse(buffer.getvalue(), content_type="application/zip")
     response["Content-Disposition"] = (
-        'attachment; filename="trywryter-' + platform + '.zip"'
+        'attachment; filename="writepost-' + platform + '.zip"'
     )
     response["Cache-Control"] = "private, no-store"
     return response

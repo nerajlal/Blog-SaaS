@@ -316,7 +316,7 @@ class PortalTests(TestCase):
 
         for platform, expected in [
             ("react", "app/posts/[slug]/page.jsx"),
-            ("wordpress", "trywryter-posts.php"),
+            ("wordpress", "writepost-posts.php"),
         ]:
             url = reverse("integration_download", args=[self.project.pk, platform])
             response = self.client.get(url)
@@ -324,7 +324,7 @@ class PortalTests(TestCase):
             self.assertEqual(response["Content-Type"], "application/zip")
             with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
                 self.assertIn(
-                    "trywryter-" + platform + "/" + expected, archive.namelist()
+                    "writepost-" + platform + "/" + expected, archive.namelist()
                 )
                 self.assertFalse(
                     any("node_modules" in name for name in archive.namelist())
@@ -381,7 +381,7 @@ class PortalTests(TestCase):
         from .templatetags.portal_tags import customer_ai_message
 
         self.assertEqual(
-            customer_ai_message("Claude timed out"), "TryWryter AI timed out"
+            customer_ai_message("Claude timed out"), "WritePost AI timed out"
         )
         self.assertNotIn(
             "claude", customer_ai_message("claude-opus-example response failed").lower()
@@ -746,6 +746,51 @@ class PortalTests(TestCase):
             len(self.client.get(reverse("gallery"), {"page": 2}).context["assets"]), 2
         )
         self.assertEqual(self.client.post(reverse("gallery")).status_code, 403)
+
+    def test_writepost_rebrand_retains_old_diagnostics_and_dns_compatibility(self):
+        from .templatetags.portal_tags import customer_ai_message
+
+        self.assertEqual(
+            customer_ai_message("TryWryter AI timed out."), "WritePost AI timed out."
+        )
+        site = HostedSite.objects.create(
+            project=self.project,
+            enabled=True,
+            domain="blog.example.com",
+            verified_at=timezone.now(),
+        )
+        with override_settings(ALLOWED_HOSTS=["testserver", "blog.example.com"]):
+            for path in [
+                "/.well-known/writepost-hosted",
+                "/.well-known/trywryter-hosted",
+            ]:
+                self.assertContains(
+                    self.client.get(path, HTTP_HOST=site.domain),
+                    site.verification_token,
+                )
+        with patch(
+            "portal.management.commands.activate_hosted_domain.requests.get",
+            side_effect=[
+                Mock(status_code=404),
+                Mock(status_code=200, text=site.verification_token),
+            ],
+        ):
+            call_command("activate_hosted_domain", site.domain, stdout=io.StringIO())
+        site.refresh_from_db()
+        self.assertIsNotNone(site.activated_at)
+
+    def test_system_administration_uses_writepost_brand_assets(self):
+        administrator = User.objects.create_superuser(
+            username="writepost-admin",
+            email="writepost-admin@example.com",
+            password="AdminBrandPassword492!",
+        )
+        self.client.force_login(administrator)
+        response = self.client.get(reverse("admin:index"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "WritePost administration")
+        self.assertContains(response, "portal/brand/writepost-white.svg")
+        self.assertNotContains(response, "TryWryter")
 
     def profile(self):
         profile = AiProfile.objects.create(
@@ -1919,13 +1964,13 @@ class CrawlerTests(TestCase):
             ]
         )
         self.assertFalse(
-            policy.can_fetch("TryWryter-AI", "https://example.com/private/account")
+            policy.can_fetch("WritePost-AI", "https://example.com/private/account")
         )
         self.assertTrue(
-            policy.can_fetch("TryWryter-AI", "https://example.com/private/public")
+            policy.can_fetch("WritePost-AI", "https://example.com/private/public")
         )
         self.assertFalse(
-            policy.can_fetch("TryWryter-AI", "https://example.com/page?secret=value")
+            policy.can_fetch("WritePost-AI", "https://example.com/page?secret=value")
         )
 
 
@@ -2531,17 +2576,19 @@ class SeoQualityTests(TestCase):
         self.assertIsNone(response.context["health_summary"]["average_seo"])
         self.assertEqual(SeoAnalysis.objects.filter(blog=self.blog).count(), 1)
 
-    def test_trywryter_branding_preserves_public_api_paths(self):
+    def test_writepost_branding_preserves_public_api_paths(self):
         from django.template.loader import render_to_string
 
         self.client.logout()
         for route in ("home", "login"):
             response = self.client.get(reverse(route))
-            self.assertContains(response, "TryWryter")
+            self.assertContains(response, "WritePost")
             self.assertNotContains(response, "BlogSaaS")
+            self.assertNotContains(response, "TryWryter")
+            self.assertContains(response, "portal/brand/writepost-horizontal.svg")
         self.assertEqual(
             render_to_string("portal/reset_subject.txt").strip(),
-            "Reset your TryWryter password",
+            "Reset your WritePost password",
         )
         self.assertEqual(reverse("api_blogs"), "/api/v1/projects/blogs")
 

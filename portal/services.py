@@ -230,7 +230,7 @@ def fetch_public(url, method="GET", same_origin=None, robots=None, binary=False)
             raise ValidationError(
                 "Redirect left the selected website; enter the final public URL."
             )
-        if robots and not robots.can_fetch("TryWryter-AI", url):
+        if robots and not robots.can_fetch("WritePost-AI", url):
             raise ValidationError("Page is disallowed by robots.txt.")
         p = urlsplit(url)
         ips = []
@@ -269,7 +269,7 @@ def fetch_public(url, method="GET", same_origin=None, robots=None, binary=False)
             response = pool.request(
                 method,
                 p.path + ("?" + p.query if p.query else ""),
-                headers={"Host": p.netloc, "User-Agent": "TryWryter-AI/1.0"},
+                headers={"Host": p.netloc, "User-Agent": "WritePost-AI/1.0"},
                 redirect=False,
                 retries=False,
                 preload_content=False,
