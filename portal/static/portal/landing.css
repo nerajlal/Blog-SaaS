@@ -155,3 +155,8 @@ body{padding-top:75px}
 .public-blog-cta p{margin:0 0 18px}
 .public-blog-cta .button{width:fit-content}
 @media(max-width:767px){.public-blog-main{padding-top:28px}.public-blog-intro{padding:38px 0 28px}.public-blog-intro p{font-size:14px}.public-blog-pagination{gap:10px}.public-blog-pagination .button{padding-inline:11px}.public-blog-cta{margin-top:50px;padding:26px 18px}}
+
+/* Keep the landing page's primary actions simple and solid. */
+.site-header .button,.agency-hero .button,.workflow-cta .button,.final-cta .button{border:0;border-radius:30px;box-shadow:none}
+.site-header .button:hover,.agency-hero .button:hover,.workflow-cta .button:hover,.final-cta .button:hover{transform:translateY(-1px);box-shadow:none}
+.site-header .button.primary:hover,.agency-hero .button.primary:hover,.workflow-cta .button.primary:hover,.final-cta .button.primary:hover{background:#2344df;box-shadow:none}
