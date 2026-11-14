@@ -180,3 +180,4 @@ def create_post(connection: LinkedInConnection, text: str, target_urn: str = Non
 
     logger.error("LinkedIn post error: %d - %s", resp.status_code, resp.text)
     return {"success": False, "error": error_detail, "status_code": resp.status_code}
+
