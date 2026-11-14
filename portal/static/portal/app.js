@@ -56,7 +56,20 @@ document.querySelectorAll('[data-linkedin-copy]').forEach(link=>link.addEventLis
  const status=document.getElementById('linkedin-copy-status');
  if(!body){event.preventDefault();status.textContent='Add post text before opening LinkedIn.';return;}
  const text=body+(hashtags&&!body.includes(hashtags)?'\n\n'+hashtags:'');
- const success=()=>{status.textContent='Post copied. In LinkedIn, click Start a post and paste it. Review before publishing.';};
+
+ // Silently auto-save current edits via the review form if available
+ const reviewForm=document.getElementById('ai-review-form');
+ if(reviewForm){
+   const formData=new FormData(reviewForm);
+   fetch(reviewForm.action||window.location.href,{
+     method:'POST',
+     body:formData,
+     credentials:'same-origin',
+     headers:{'X-Requested-With':'XMLHttpRequest'}
+   }).catch(()=>{});
+ }
+
+ const success=()=>{status.textContent='Post copied & saved. In LinkedIn, click Start a post and paste it. Review before publishing.';};
  const fallback=()=>{const field=document.createElement('textarea');field.value=text;field.style.position='fixed';field.style.opacity='0';document.body.append(field);field.select();let copied=false;try{copied=document.execCommand('copy');}catch{}field.remove();if(copied)success();else{status.textContent='Clipboard access was blocked. Use Copy Body or select and copy the text, then paste it into LinkedIn.';document.getElementById('result-body')?.focus();}};
  if(navigator.clipboard?.writeText){navigator.clipboard.writeText(text).then(success,fallback);}else{fallback();}
 }));
