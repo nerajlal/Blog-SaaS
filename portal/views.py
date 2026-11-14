@@ -2613,15 +2613,16 @@ def linkedin_callback(request):
     flow = request.session.pop("linkedin_oauth", None)
     error = request.GET.get("error")
     error_desc = request.GET.get("error_description", "")
+    next_url = (flow.get("next") if flow else None) or reverse("projects")
     if error:
         messages.error(request, f"LinkedIn connection cancelled: {error_desc or error}")
-        next_url = (flow.get("next") if flow else None) or reverse("projects")
         return redirect(next_url)
 
     state = request.GET.get("state", "")
     code = request.GET.get("code", "")
     if not flow or not secrets.compare_digest(str(flow.get("state", "")), state) or not code:
-        raise ValidationError("LinkedIn OAuth session expired or state mismatch. Please try again.")
+        messages.error(request, "LinkedIn OAuth session expired or state mismatch. Please click Connect LinkedIn again.")
+        return redirect(next_url)
 
     from . import linkedin_tools
     redirect_uri = getattr(settings, "LINKEDIN_REDIRECT_URI", "") or request.build_absolute_uri(reverse("linkedin_callback"))
@@ -2630,9 +2631,10 @@ def linkedin_callback(request):
         conn = linkedin_tools.save_or_update_connection(request.user, token_data)
         messages.success(request, f"Connected to LinkedIn as {conn.account_name}!")
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
         messages.error(request, f"Failed to connect LinkedIn: {exc}")
 
-    next_url = flow.get("next") or reverse("projects")
     return redirect(next_url)
 
 
