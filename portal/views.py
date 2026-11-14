@@ -2620,8 +2620,12 @@ def linkedin_callback(request):
 
     state = request.GET.get("state", "")
     code = request.GET.get("code", "")
-    if not flow or not secrets.compare_digest(str(flow.get("state", "")), state) or not code:
-        messages.error(request, "LinkedIn OAuth session expired or state mismatch. Please click Connect LinkedIn again.")
+    if not code:
+        messages.error(request, "No authorization code returned from LinkedIn. Please try again.")
+        return redirect(next_url)
+
+    if flow and not secrets.compare_digest(str(flow.get("state", "")), state):
+        messages.error(request, "LinkedIn OAuth state mismatch. Please click Connect LinkedIn again.")
         return redirect(next_url)
 
     from . import linkedin_tools
