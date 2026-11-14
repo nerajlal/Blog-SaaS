@@ -13,7 +13,7 @@ LINKEDIN_AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization"
 LINKEDIN_TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 LINKEDIN_USERINFO_URL = "https://api.linkedin.com/v2/userinfo"
 LINKEDIN_REST_POSTS_URL = "https://api.linkedin.com/rest/posts"
-LINKEDIN_API_VERSION = "202401"
+LINKEDIN_API_VERSION = "202610"
 
 
 def get_authorization_url(state: str, redirect_uri: str = None) -> str:
