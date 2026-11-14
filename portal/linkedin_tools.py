@@ -39,11 +39,21 @@ def exchange_code_for_token(code: str, redirect_uri: str = None) -> dict:
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": redirect_uri,
-        "client_id": settings.LINKEDIN_CLIENT_ID,
-        "client_secret": settings.LINKEDIN_CLIENT_SECRET,
+        "client_id": settings.LINKEDIN_CLIENT_ID.strip(),
+        "client_secret": settings.LINKEDIN_CLIENT_SECRET.strip(),
     }
-    resp = requests.post(LINKEDIN_TOKEN_URL, data=payload, timeout=15)
-    resp.raise_for_status()
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    resp = requests.post(LINKEDIN_TOKEN_URL, data=payload, headers=headers, timeout=15)
+    if not resp.ok:
+        logger.error("LinkedIn token exchange failed: %d - %s", resp.status_code, resp.text)
+        try:
+            err_json = resp.json()
+            err_msg = err_json.get("error_description") or err_json.get("message") or resp.text
+        except Exception:
+            err_msg = resp.text
+        raise ValueError(f"LinkedIn error ({resp.status_code}): {err_msg}")
     return resp.json()
 
 
