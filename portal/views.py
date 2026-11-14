@@ -1528,6 +1528,10 @@ def ai_run(request, pk, run_id, action=None):
     preview_url = ""
     if run.blog_id and project.blogs.live().filter(pk=run.blog_id).exists():
         preview_url = article_url(run.blog)
+    
+    linkedin_conn = LinkedInConnection.objects.filter(user=request.user).first() if request.user.is_authenticated else None
+    linkedin_configured = bool(getattr(settings, "LINKEDIN_CLIENT_ID", "") and getattr(settings, "LINKEDIN_CLIENT_SECRET", ""))
+
     fields = [
         {
             "name": key,
@@ -1553,6 +1557,8 @@ def ai_run(request, pk, run_id, action=None):
             )
             if run.blog_id and run.blog.cover_image
             else "",
+            "linkedin_conn": linkedin_conn,
+            "linkedin_configured": linkedin_configured,
         },
     )
 
@@ -2578,3 +2584,135 @@ def integration_download(request, pk, platform):
     )
     response["Cache-Control"] = "private, no-store"
     return response
+
+
+@page
+@require_GET
+def linkedin_connect(request):
+    """Start LinkedIn OAuth authorization flow."""
+    if not (getattr(settings, "LINKEDIN_CLIENT_ID", "") and getattr(settings, "LINKEDIN_CLIENT_SECRET", "")):
+        raise ValidationError("LinkedIn integration is not configured on the server.")
+    
+    from . import linkedin_tools
+    state = secrets.token_urlsafe(24)
+    next_url = request.GET.get("next") or reverse("projects")
+    request.session["linkedin_oauth"] = {
+        "state": state,
+        "time": timezone.now().timestamp(),
+        "next": next_url,
+    }
+    redirect_uri = getattr(settings, "LINKEDIN_REDIRECT_URI", "") or request.build_absolute_uri(reverse("linkedin_callback"))
+    auth_url = linkedin_tools.get_authorization_url(state=state, redirect_uri=redirect_uri)
+    return redirect(auth_url)
+
+
+@page
+@require_GET
+def linkedin_callback(request):
+    """Handle callback from LinkedIn OAuth."""
+    flow = request.session.pop("linkedin_oauth", None)
+    error = request.GET.get("error")
+    error_desc = request.GET.get("error_description", "")
+    if error:
+        messages.error(request, f"LinkedIn connection cancelled: {error_desc or error}")
+        next_url = (flow.get("next") if flow else None) or reverse("projects")
+        return redirect(next_url)
+
+    state = request.GET.get("state", "")
+    code = request.GET.get("code", "")
+    if not flow or not secrets.compare_digest(str(flow.get("state", "")), state) or not code:
+        raise ValidationError("LinkedIn OAuth session expired or state mismatch. Please try again.")
+
+    from . import linkedin_tools
+    redirect_uri = getattr(settings, "LINKEDIN_REDIRECT_URI", "") or request.build_absolute_uri(reverse("linkedin_callback"))
+    try:
+        token_data = linkedin_tools.exchange_code_for_token(code=code, redirect_uri=redirect_uri)
+        conn = linkedin_tools.save_or_update_connection(request.user, token_data)
+        messages.success(request, f"Connected to LinkedIn as {conn.account_name}!")
+    except Exception as exc:
+        messages.error(request, f"Failed to connect LinkedIn: {exc}")
+
+    next_url = flow.get("next") or reverse("projects")
+    return redirect(next_url)
+
+
+@page
+@require_POST
+def linkedin_disconnect(request):
+    """Disconnect LinkedIn account."""
+    LinkedInConnection.objects.filter(user=request.user).delete()
+    messages.success(request, "LinkedIn account disconnected.")
+    next_url = request.POST.get("next") or reverse("projects")
+    return redirect(next_url)
+
+
+@page
+@require_POST
+def linkedin_select_target(request):
+    """Select active target (personal profile or managed page) for posting."""
+    target = request.POST.get("target_urn", "").strip()
+    conn = LinkedInConnection.objects.filter(user=request.user).first()
+    if conn and target:
+        conn.selected_target = target
+        conn.save(update_fields=["selected_target", "updated_at"])
+    next_url = request.POST.get("next") or reverse("projects")
+    return redirect(next_url)
+
+
+@page
+@require_POST
+def linkedin_post_direct(request, run_id):
+    """Publish the AI-generated social post directly to LinkedIn via API."""
+    run = get_object_or_404(AiRun, pk=run_id)
+    project_for(request, run.project_id, "edit")
+    
+    conn = LinkedInConnection.objects.filter(user=request.user).first()
+    if not conn:
+        return JsonResponse({"ok": False, "error": "LinkedIn account is not connected."}, status=400)
+
+    # Save latest edits from request if provided
+    title = request.POST.get("title", "")
+    body = request.POST.get("body", "")
+    hashtags = request.POST.get("hashtags", "")
+    target_urn = request.POST.get("target_urn", "").strip() or conn.selected_target
+
+    if body:
+        edited = dict(run.edited or run.result)
+        edited["title"] = title
+        edited["body"] = body
+        if hashtags:
+            edited["hashtags"] = hashtags
+        run.edited = edited
+        run.reviewed_at = timezone.now()
+        run.revision += 1
+        run.save(update_fields=["edited", "reviewed_at", "revision", "updated_at"])
+
+    full_text = body.strip()
+    if hashtags and hashtags.strip() not in full_text:
+        full_text += f"\n\n{hashtags.strip()}"
+
+    if not full_text:
+        return JsonResponse({"ok": False, "error": "Post text cannot be empty."}, status=400)
+
+    from . import linkedin_tools
+    try:
+        res = linkedin_tools.create_post(
+            connection=conn,
+            text=full_text,
+            target_urn=target_urn,
+        )
+        if res.get("success"):
+            post_urn = res.get("post_urn", "")
+            return JsonResponse({
+                "ok": True,
+                "post_urn": post_urn,
+                "message": "Successfully published to LinkedIn!"
+            })
+        else:
+            return JsonResponse({
+                "ok": False,
+                "error": res.get("error", "Failed to publish post to LinkedIn.")
+            }, status=400)
+    except Exception as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=500)
+

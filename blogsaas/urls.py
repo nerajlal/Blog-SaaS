@@ -62,6 +62,11 @@ urlpatterns = [
     path("login", v.sign_in, name="login"),
     path("login/google", v.google_auth_start, name="google_auth_start"),
     path("login/google/callback", v.google_auth_callback, name="google_auth_callback"),
+    path("social/linkedin/connect", v.linkedin_connect, name="linkedin_connect"),
+    path("social/linkedin/callback", v.linkedin_callback, name="linkedin_callback"),
+    path("social/linkedin/disconnect", v.linkedin_disconnect, name="linkedin_disconnect"),
+    path("social/linkedin/target", v.linkedin_select_target, name="linkedin_select_target"),
+    path("social/linkedin/post/<int:run_id>", v.linkedin_post_direct, name="linkedin_post_direct"),
     path("register", v.register, name="register"),
     path("logout", v.sign_out, name="logout"),
     path(

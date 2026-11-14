@@ -481,3 +481,16 @@ class GalleryImage(Timestamped):
     uploaded_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     path = models.CharField(max_length=500, unique=True)
     name = models.CharField(max_length=255)
+
+
+class LinkedInConnection(Timestamped):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="linkedin_connections")
+    tokens = EncryptedJSONField(default=dict)
+    account_urn = models.CharField(max_length=255, blank=True)
+    account_name = models.CharField(max_length=255, blank=True)
+    account_picture = models.URLField(max_length=1000, blank=True)
+    # Available pages / organization targets the user manages: [{'urn': 'urn:li:organization:123', 'name': 'My Page'}, ...]
+    pages = models.JSONField(default=list, blank=True)
+    selected_target = models.CharField(max_length=255, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
